@@ -15,6 +15,9 @@ public interface ESCodeInfoRepository extends ElasticsearchRepository<CodeInfo, 
 
     List<CodeInfo> findByCode(String s);
     List<CodeInfo> findByCodeStartingWith(String code);
+
+
+    List<CodeInfo> findByDescriptionContains(String description);
 }
 
 
