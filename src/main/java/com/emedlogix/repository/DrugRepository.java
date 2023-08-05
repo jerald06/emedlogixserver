@@ -20,4 +20,9 @@ public interface DrugRepository extends JpaRepository<Drug, Integer> {
 	@Query(value = "SELECT t.parent_id as id,n.title as title,n.nemod as nemod,t.level as level,n.ismainterm as ismainterm "
 			+ "FROM drug n join drug_hierarchy t on t.parent_id=n.id where t.child_id = :id order by t.level asc", nativeQuery = true)
 	List<Map<String,Object>> getParentChildList(Integer id);
+
+	@Query(value = "SELECT n.id as id ,n.title as title,n.see as see,n.seealso as seealso,n.nemod as nemod,n.ismainterm as ismainterm,GROUP_CONCAT(c.code) as code "
+			+ "FROM drug n join drug_code c on n.id=c.drug_id "
+			+ "group by n.id", nativeQuery = true)
+	List<Map<String, Object>> findAllDrugData();
 }

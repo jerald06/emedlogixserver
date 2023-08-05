@@ -17,7 +17,7 @@ public class ExtractorScheduler {
     @PostConstruct
     public void doExtractChaperSectionXML() {
         logger.info("Extractor Service has been initiated for XML extraction...");
-      //  extractorService.doExtractCapterSectionXML();
+       // extractorService.doExtractCapterSectionXML();
         logger.info("Extractor Service XML completed...");
     }
 
@@ -31,7 +31,7 @@ public class ExtractorScheduler {
     @PostConstruct
     public void doExtractIndex() {
         logger.info("Extractor Service has been initiated for Eindex Codes...");
-       // extractorService.doExtractIndex();
+       //extractorService.doExtractIndex();
         logger.info("Extractor Service Eindex Codes completed...");
     }
     
@@ -45,7 +45,7 @@ public class ExtractorScheduler {
     @PostConstruct
     public void doExtractDrug() {
         logger.info("Extractor Service has been initiated for Drug Codes...");
-       // extractorService.doExtractDrug();
+        //extractorService.doExtractDrug();
         logger.info("Extractor Service Drug Codes completed...");
     }
 }

@@ -9,6 +9,7 @@ import static com.emedlogix.util.Constants.ORDER;
 import static com.emedlogix.util.Constants.TABULAR;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -61,6 +62,7 @@ import com.emedlogix.repository.DBCodeDetailsRepository;
 import com.emedlogix.repository.DrugCodeRepository;
 import com.emedlogix.repository.DrugHierarchyRepository;
 import com.emedlogix.repository.DrugRepository;
+import com.emedlogix.repository.ESCodeInfoRepository;
 import com.emedlogix.repository.EindexRepository;
 import com.emedlogix.repository.FileStatusReposistory;
 import com.emedlogix.repository.NeoPlasmCodeRepository;
@@ -542,8 +544,9 @@ public class ExtractorServiceImpl implements ExtractorService {
 
 	@Override
 	public void doExtractIndex() {//test_index.xml, icd10cm_index_2023.xml,icd10cm_eindex_2023.xml
+        loadIndexData(2023,"icd10cm_index_2023.xml");
 		loadIndexData(2023,"icd10cm_eindex_2023.xml");
-		loadIndexData(2023,"icd10cm_index_2023.xml");
+
 	}
 
 	@Override
