@@ -36,6 +36,8 @@ public class CodeSearchService implements CodeSearchController {
     public static final Logger logger = LoggerFactory.getLogger(CodeSearchService.class);
     private static final String INDEX_NAME = "details";
     private static final String FIELD_NAME = "code";
+    private Map<String,Object> indexMap = null;
+	private String code = null;
 
     @Autowired
     ESCodeInfoRepository esCodeInfoRepository;
@@ -111,6 +113,40 @@ public class CodeSearchService implements CodeSearchController {
 		}).collect(Collectors.toList());
 	}
 
+	@Override
+	public List<EindexVO> getEIndexByNameSearch(String name,boolean mainTermSearch) {
+		String[] names = name.split(" ");
+		if(names.length>1) {
+			return null;
+		} else {
+			if(mainTermSearch) {
+				return getMainTermFirstLevel(names[0]);
+			} else {
+				return getLevelTermMainTerm(names[0]);
+			}
+		}
+	}
+
+	private List<EindexVO> getLevelTermMainTerm(String name) {
+		List<EindexVO> indexList = new ArrayList<>();
+		eindexRepository.searchLevelTermMainTerm(name).forEach(map -> {
+			if(indexMap!=null && indexMap.get("childId")!=map.get("childId")) {
+				indexList.add(populateEindexVO(indexMap,code));
+			}
+			indexMap = map;
+			if(map.get("code")!=null) {
+				code = map.get("childId").toString();
+			}
+		});
+		return indexList;
+	}
+
+	private List<EindexVO> getMainTermFirstLevel(String name) {
+		return eindexRepository.searchMainTermLevelOne(name).stream().map(m -> {
+			return populateEindexVO(m);
+		}).collect(Collectors.toList());
+	}
+
 	private MedicalCodeVO getDrugNeoplasmHierarchy(Map<String, Object> m,String type) {		
 		MedicalCodeVO resultMedicalCode = null;
 		List<Map<String,Object>> resultMap = new ArrayList<>();
@@ -165,6 +201,14 @@ public class CodeSearchService implements CodeSearchController {
 		return eindexVo;
 	}
 	
+	private EindexVO populateEindexVO(Map<String,Object> map,String code) {
+		EindexVO eindexVo = populateEindexVO(map);
+		if(code!=null) {
+			eindexVo.setCode(code);
+		}
+		return eindexVo;
+	}
+
 	private MedicalCodeVO populateMedicalCode(Map<String, Object> m) {
 		MedicalCodeVO medicalCode = new MedicalCodeVO();
 		medicalCode.setId(Integer.valueOf(String.valueOf(m.get("id"))));

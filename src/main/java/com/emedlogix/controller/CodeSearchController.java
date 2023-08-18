@@ -4,6 +4,7 @@ package com.emedlogix.controller;
 import java.io.IOException;
 import java.util.List;
 
+import org.springframework.data.annotation.QueryAnnotation;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,4 +34,7 @@ public interface CodeSearchController {
     List<MedicalCodeVO> getNeoPlasm(@PathVariable String code);
     @GetMapping("/{code}/drug")
 	List<MedicalCodeVO> getDrug(@PathVariable String code);
+    @GetMapping("/index/search/name")
+	List<EindexVO> getEIndexByNameSearch(@RequestParam(required = true,value = "name") String name,
+			@RequestParam(required = false,value = "mainTermSearch",defaultValue = "true") boolean mainTermSearch);
 }
