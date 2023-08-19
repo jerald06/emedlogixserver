@@ -30,4 +30,7 @@ public interface EindexRepository extends JpaRepository<Eindex, Integer> {
 			+ "join term_hierarchy t on t.parent_id=e.id "
 			+ "where t.child_id in (select id from eindex where title like ':title%' and ismainterm=false)", nativeQuery = true)
 	List<Map<String,Object>> searchLevelTermMainTerm(String title);
+	
+	@Query(value="SELECT e from eindex e where e.code = :title%",nativeQuery = true)
+	List<Eindex> findMainTerm(String title);
 }

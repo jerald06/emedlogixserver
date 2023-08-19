@@ -3,6 +3,7 @@ package com.emedlogix.service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -115,33 +116,48 @@ public class CodeSearchService implements CodeSearchController {
 
 	@Override
 	public List<EindexVO> getEIndexByNameSearch(String name,boolean mainTermSearch) {
-		String[] names = name.split(" ");
-		if(names.length>1) {
+		String[] names = name.trim().split(" ");
+		if(names.length>1 && names.length == 2) {
+			if(mainTermSearch) {
+				return multipleMainTermSearch(names);
+			} else {
+				
+			}
 			return null;
 		} else {
 			if(mainTermSearch) {
-				return getMainTermFirstLevel(names[0]);
+				return singleMainTermSearch(names[0]);
 			} else {
-				return getLevelTermMainTerm(names[0]);
+				return singleLevelTermSearch(names[0]);
 			}
 		}
 	}
 
-	private List<EindexVO> getLevelTermMainTerm(String name) {
+	private List<EindexVO> multipleMainTermSearch(String[] names) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	private List<EindexVO> singleLevelTermSearch(String name) {
 		List<EindexVO> indexList = new ArrayList<>();
 		eindexRepository.searchLevelTermMainTerm(name).forEach(map -> {
 			if(indexMap!=null && indexMap.get("childId")!=map.get("childId")) {
 				indexList.add(populateEindexVO(indexMap,code));
+				code = null;
 			}
 			indexMap = map;
 			if(map.get("code")!=null) {
 				code = map.get("childId").toString();
 			}
 		});
+		indexList.add(populateEindexVO(indexMap,code));
+		indexList.sort(Comparator.comparing(m -> m.getTitle(),
+				Comparator.nullsLast(Comparator.naturalOrder())
+		));
 		return indexList;
 	}
 
-	private List<EindexVO> getMainTermFirstLevel(String name) {
+	private List<EindexVO> singleMainTermSearch(String name) {
 		return eindexRepository.searchMainTermLevelOne(name).stream().map(m -> {
 			return populateEindexVO(m);
 		}).collect(Collectors.toList());
