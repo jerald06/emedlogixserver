@@ -7,7 +7,9 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,10 +27,11 @@ import com.emedlogix.entity.Section;
 import com.emedlogix.repository.ChapterRepository;
 import com.emedlogix.repository.DBCodeDetailsRepository;
 import com.emedlogix.repository.DrugRepository;
-import com.emedlogix.repository.ESCodeInfoRepository;
 import com.emedlogix.repository.EindexRepository;
 import com.emedlogix.repository.NeoPlasmRepository;
 import com.emedlogix.repository.SectionRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 @Service
@@ -134,8 +137,30 @@ public class CodeSearchService implements CodeSearchController {
 	}
 
 	private List<EindexVO> multipleMainTermSearch(String[] names) {
-		// TODO Auto-generated method stub
+		List<Eindex> mainTermResult = eindexRepository.findMainTerm(names[0]);
+		List<String> mainTermsTitle = new ArrayList<>();
+		mainTermResult.forEach( e -> {
+			getMainTermsTitle(e,mainTermsTitle);
+		});
+		if(mainTermsTitle.size()>0) {
+			return eindexRepository.findSecondMainTermLevel(mainTermsTitle,names[1]).stream().map(i -> {
+				ObjectMapper mapper = new ObjectMapper();
+				Map<String, Object> map = mapper.convertValue(i, new TypeReference<Map<String, Object>>() {});
+				return populateEindexVO(map);
+			}).collect(Collectors.toList());
+		} else {
+			
+		}
 		return null;
+	}
+	
+	private void getMainTermsTitle(Eindex eindex,List<String> mainTermsTitle){
+		if(eindex.getSee()!=null) {
+			mainTermsTitle.addAll(Arrays.asList(eindex.getSee().split(",")));
+		}
+		if(eindex.getSeealso()!=null) {
+			mainTermsTitle.addAll(Arrays.asList(eindex.getSeealso().split(",")));
+		}
 	}
 
 	private List<EindexVO> singleLevelTermSearch(String name) {

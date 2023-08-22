@@ -1,21 +1,21 @@
 CREATE TABLE eindex (
     id int NOT NULL AUTO_INCREMENT,
-    title varchar(255) NOT NULL,
+    title varchar(2055) NOT NULL,
     code varchar(255),
     see varchar(255),
     seealso varchar(255),
     seecat varchar(255),
-    nemod varchar(255),
+    nemod varchar(2055),
     ismainterm boolean default true,
     PRIMARY KEY (id)
 ); 
 
 CREATE TABLE neoplasm (
     id int NOT NULL AUTO_INCREMENT,
-    title varchar(255) NOT NULL,
+    title varchar(2055) NOT NULL,
     see varchar(255),
     seealso varchar(255),
-    nemod varchar(255),
+    nemod varchar(2055),
     ismainterm boolean default true,
     PRIMARY KEY (id)
 );
@@ -30,10 +30,10 @@ CREATE TABLE neoplasm_code (
 
 CREATE TABLE drug (
     id int NOT NULL AUTO_INCREMENT,
-    title varchar(255) NOT NULL,
+    title varchar(2055) NOT NULL,
     see varchar(255),
     seealso varchar(255),
-    nemod varchar(255),
+    nemod varchar(2055),
     ismainterm boolean default true,
     PRIMARY KEY (id)
 );
