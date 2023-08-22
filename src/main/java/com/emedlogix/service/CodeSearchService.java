@@ -153,7 +153,7 @@ public class CodeSearchService implements CodeSearchController {
 		}
 		return null;
 	}
-	
+
 	private void getMainTermsTitle(Eindex eindex,List<String> mainTermsTitle){
 		if(eindex.getSee()!=null) {
 			mainTermsTitle.addAll(Arrays.asList(eindex.getSee().split(",")));
@@ -166,7 +166,7 @@ public class CodeSearchService implements CodeSearchController {
 	private List<EindexVO> singleLevelTermSearch(String name) {
 		List<EindexVO> indexList = new ArrayList<>();
 		eindexRepository.searchLevelTermMainTerm(name).forEach(map -> {
-			if(indexMap!=null && indexMap.get("childId")!=map.get("childId")) {
+			if(indexMap!=null && Integer.parseInt(indexMap.get("childId").toString())!=Integer.parseInt(map.get("childId").toString())) {
 				indexList.add(populateEindexVO(indexMap,code));
 				code = null;
 			}
