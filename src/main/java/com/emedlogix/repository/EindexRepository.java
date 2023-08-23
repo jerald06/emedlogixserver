@@ -31,9 +31,15 @@ public interface EindexRepository extends JpaRepository<Eindex, Integer> {
 			+ "where t.child_id in (select id from eindex where title=:title and ismainterm=false) order by t.child_id,t.level", nativeQuery = true)
 	List<Map<String,Object>> searchLevelTermMainTerm(String title);
 	
-	@Query(value="SELECT e.* from eindex e where e.title like ?1% and ismainterm=true",nativeQuery = true)
+	@Query(value="SELECT e.* from eindex e where e.title=:title and ismainterm=true",nativeQuery = true)
 	List<Eindex> findMainTerm(String title);
 	
 	@Query(value="SELECT e.* from eindex e join term_hierarchy t on t.child_id=e.id where t.parent_id in (select id from eindex where title in(?1) and ismainterm=true) and e.title like ?2%",nativeQuery = true)
 	List<Eindex> findSecondMainTermLevel(List<String> firstMainTerms, String title);
+
+	@Query(value="SELECT e.* from eindex e join term_hierarchy t on t.child_id=e.id where t.parent_id in (?1) and e.title like ?2%",nativeQuery = true)
+	List<Eindex> findMainTermLevels(List<Integer> ids, String levelTerm);
+
+	@Query(value="SELECT count(e.*) from eindex e join term_hierarchy t on t.child_id=e.id where t.parent_id=(select id from eindex where title=?1 and ismainterm=true) and e.title like ?2%",nativeQuery = true)
+	Integer mainTermHasLevelTerm(String mainTerm, String levelTerm);
 }
