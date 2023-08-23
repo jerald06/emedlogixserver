@@ -134,8 +134,11 @@ public class CodeSearchService implements CodeSearchController {
 
 	private List<EindexVO> multipleSearch(String[] names, boolean mainTermSearch) {
 		List<EindexVO> result = new ArrayList<>();
-		List<Eindex> mainTermResult = eindexRepository.findMainTerm(names[0]);
-		if(mainTermSearch && mainTermResult.size()>0) {
+		if(mainTermSearch) {
+			List<Eindex> mainTermResult = eindexRepository.findMainTerm(names[0]);
+			if(mainTermResult.size()==0) {
+				return result;
+			}
 			List<String> mainTermSeeSeeAlso = new ArrayList<>();
 			mainTermResult.forEach( e -> {
 				getMainTermSeeAndSeealso(e,mainTermSeeSeeAlso);
@@ -221,7 +224,7 @@ public class CodeSearchService implements CodeSearchController {
 			}
 			indexMap = map;
 			if(map.get("code")!=null) {
-				code = map.get("childId").toString();
+				code = map.get("code").toString();
 			}
 		});
 		indexList.add(populateEindexVO(indexMap,code));
