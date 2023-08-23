@@ -227,11 +227,11 @@ public class CodeSearchService implements CodeSearchController {
 			}
 		});
 		indexList.add(populateEindexVO(indexMap,code));
-		indexList = indexList.stream().distinct().collect( Collectors.toList() );
-		indexList.sort(Comparator.comparing(m -> m.getTitle(),
+		List<EindexVO>  resultIndex = indexList.stream().distinct().collect( Collectors.toList() );
+		resultIndex.sort(Comparator.comparing(m -> m.getTitle(),
 				Comparator.nullsLast(Comparator.naturalOrder())
 		));
-		return indexList;
+		return resultIndex;
 	}
 
 	private List<EindexVO> singleMainTermSearch(String name) {
