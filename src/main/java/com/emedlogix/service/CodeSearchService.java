@@ -7,9 +7,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +25,7 @@ import com.emedlogix.entity.Section;
 import com.emedlogix.repository.ChapterRepository;
 import com.emedlogix.repository.DBCodeDetailsRepository;
 import com.emedlogix.repository.DrugRepository;
+import com.emedlogix.repository.ESCodeInfoRepository;
 import com.emedlogix.repository.EindexRepository;
 import com.emedlogix.repository.NeoPlasmRepository;
 import com.emedlogix.repository.SectionRepository;
@@ -228,6 +227,7 @@ public class CodeSearchService implements CodeSearchController {
 			}
 		});
 		indexList.add(populateEindexVO(indexMap,code));
+		indexList = indexList.stream().distinct().collect( Collectors.toList() );
 		indexList.sort(Comparator.comparing(m -> m.getTitle(),
 				Comparator.nullsLast(Comparator.naturalOrder())
 		));
