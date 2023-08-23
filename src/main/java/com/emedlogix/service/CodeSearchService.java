@@ -138,7 +138,7 @@ public class CodeSearchService implements CodeSearchController {
 		if(mainTermResult.size()>0) {
 			List<String> mainTermsTitle = new ArrayList<>();
 			mainTermResult.forEach( e -> {
-				getMainTermSeeAndSeealo(e,mainTermsTitle);
+				getMainTermSeeAndSeealso(e,mainTermsTitle);
 			});
 			//mainTerm mainTerm(See/See Also term of main term has 2nd main term)
 			if(mainTermsTitle.contains(names[1])) {
@@ -152,11 +152,10 @@ public class CodeSearchService implements CodeSearchController {
 				return result;
 			}
 			//mainTerm LevelTermof1stTerm
-			result = eindexRepository.findMainTermLevels(mainTermResult.stream().<Integer>map(m -> {
-				return m.getId();
-			}).collect(Collectors.toList()),names[1]).stream().map(i -> {
-				return extractEintexVO(i);
-			}).collect(Collectors.toList());
+			Integer resultCount = eindexRepository.mainTermHasLevelTerm(names[0],names[1]);
+			if(resultCount>0) {
+				result = singleMainTermSearch(names[0]);
+			}
 			if(result.size()>0) {
 				return result;
 			}
@@ -187,6 +186,11 @@ public class CodeSearchService implements CodeSearchController {
 			if(result.size()>0) {
 				return result;
 			}
+			//LevelTerm NotinIndextable
+			result = singleLevelTermSearch(names[0]);
+			if(result.size()>0) {
+				return result;
+			}
 		}
 		return result;
 	}
@@ -197,7 +201,7 @@ public class CodeSearchService implements CodeSearchController {
 		return populateEindexVO(map);
 	}
 
-	private void getMainTermSeeAndSeealo(Eindex eindex,List<String> mainTermsTitle){
+	private void getMainTermSeeAndSeealso(Eindex eindex,List<String> mainTermsTitle){
 		if(eindex.getSee()!=null) {
 			mainTermsTitle.addAll(Arrays.asList(eindex.getSee().split(",")));
 		}
