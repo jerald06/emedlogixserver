@@ -136,20 +136,15 @@ public class CodeSearchService implements CodeSearchController {
 		List<EindexVO> result = new ArrayList<>();
 		List<Eindex> mainTermResult = eindexRepository.findMainTerm(names[0]);
 		if(mainTermResult.size()>0) {
-			List<String> mainTermsTitle = new ArrayList<>();
+			List<String> mainTermSeeSeeAlso = new ArrayList<>();
 			mainTermResult.forEach( e -> {
-				getMainTermSeeAndSeealso(e,mainTermsTitle);
+				getMainTermSeeAndSeealso(e,mainTermSeeSeeAlso);
 			});
 			//mainTerm mainTerm(See/See Also term of main term has 2nd main term)
-			if(mainTermsTitle.contains(names[1])) {
+			if(mainTermSeeSeeAlso.contains(names[1])) {
 				return mainTermResult.stream().map(i -> {
 					return extractEintexVO(i);
 				}).collect(Collectors.toList());
-			}
-			//mainTerm mainTerm(Else show all Level terms applicable for 2nd main term)
-			result = singleMainTermSearch(names[1]);
-			if(result.size()>0) {
-				return result;
 			}
 			//mainTerm LevelTermof1stTerm
 			Integer resultCount = eindexRepository.mainTermHasLevelTerm(names[0],names[1]);
@@ -160,12 +155,19 @@ public class CodeSearchService implements CodeSearchController {
 				return result;
 			}
 			//mainTerm NotLevelTermof1stTerm(Show if See/See Also term of main term have the level term entered)
-			result = eindexRepository.findSecondMainTermLevel(mainTermsTitle,names[1]).stream().map(i -> {
+			result = eindexRepository.findSecondMainTermLevel(mainTermSeeSeeAlso,names[1]).stream().map(i -> {
 				return extractEintexVO(i);
 			}).collect(Collectors.toList());
 			if(result.size()>0) {
 				return result;
 			}
+
+			//mainTerm mainTerm(Else show all Level terms applicable for 2nd main term)
+			result = singleMainTermSearch(names[1]);
+			if(result.size()>0) {
+				return result;
+			}
+
 			//mainTerm NotLevelTermof1stTerm(Else show all main terms associated with the level term entered)
 			result = singleLevelTermSearch(names[1]);
 			if(result.size()>0) {
