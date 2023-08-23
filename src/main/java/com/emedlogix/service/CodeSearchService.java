@@ -7,6 +7,9 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -227,11 +230,17 @@ public class CodeSearchService implements CodeSearchController {
 			}
 		});
 		indexList.add(populateEindexVO(indexMap,code));
-		List<EindexVO>  resultIndex = indexList.stream().distinct().collect( Collectors.toList() );
+		List<EindexVO> resultIndex = indexList.stream().filter(distinctByKey(p -> p.getId()))
+				.collect(Collectors.toList());
 		resultIndex.sort(Comparator.comparing(m -> m.getTitle(),
 				Comparator.nullsLast(Comparator.naturalOrder())
 		));
 		return resultIndex;
+	}
+
+	public static <T> Predicate<T> distinctByKey(Function<? super T, Object> keyExtractor) {
+		Map<Object, Boolean> map = new ConcurrentHashMap<>();
+		return t -> map.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
 	}
 
 	private List<EindexVO> singleMainTermSearch(String name) {
