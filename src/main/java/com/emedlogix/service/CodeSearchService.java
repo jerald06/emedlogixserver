@@ -121,21 +121,21 @@ public class CodeSearchService implements CodeSearchController {
 	public List<EindexVO> getEIndexByNameSearch(String name,boolean mainTermSearch) {
 		String[] names = name.trim().split(" ");
 		if(names.length>1 && names.length == 2) {
-			return multipleSearch(names);
+			return multipleSearch(names, mainTermSearch);
 		} else {
-			List<EindexVO> result = singleMainTermSearch(names[0]);
-			if(result.size()>0) {
-				return result;
-			} else {
+			if(mainTermSearch) {
+				return singleMainTermSearch(names[0]);
+			}
+			else {
 				return singleLevelTermSearch(names[0]);
 			}
 		}
 	}
 
-	private List<EindexVO> multipleSearch(String[] names) {
+	private List<EindexVO> multipleSearch(String[] names, boolean mainTermSearch) {
 		List<EindexVO> result = new ArrayList<>();
 		List<Eindex> mainTermResult = eindexRepository.findMainTerm(names[0]);
-		if(mainTermResult.size()>0) {
+		if(mainTermSearch && mainTermResult.size()>0) {
 			List<String> mainTermSeeSeeAlso = new ArrayList<>();
 			mainTermResult.forEach( e -> {
 				getMainTermSeeAndSeealso(e,mainTermSeeSeeAlso);
