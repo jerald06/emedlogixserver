@@ -194,7 +194,7 @@ public class ExtractorServiceImpl implements ExtractorService {
         try {
             JAXBContext context = JAXBContext.newInstance(ICD10CMTabular.class);
             ICD10CMTabular tabular = (ICD10CMTabular) context.createUnmarshaller()
-                    .unmarshal(new FileReader(ResourceUtils.getFile("classpath:icd10cm_tabular_2023.xml")));
+                    .unmarshal(new InputStreamReader(new ClassPathResource(fileStr).getInputStream()));
             String version = tabular.getVersion().getContent().get(0).toString();
             String icdtitle = tabular.getIntroduction().getIntroSection().get(0).getTitle().getContent().get(0).toString();
             icdtitle = icdtitle.substring(icdtitle.indexOf(" "));
@@ -277,7 +277,7 @@ public class ExtractorServiceImpl implements ExtractorService {
         Map<String, CodeDetails> codeDetailsMap = new HashMap<>();
         Map<String, CodeInfo> codeMap = new HashMap<>();
         try {
-            BufferedReader reader = new BufferedReader(new FileReader(ResourceUtils.getFile("classpath:icd10cm_order_2023.txt")));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new ClassPathResource(fileStr).getInputStream()));//new BufferedReader(new FileReader(ResourceUtils.getFile("classpath:icd10cm_order_2023.txt")));
             String line;
             List<String> lines = new ArrayList<>();
             while ((line = reader.readLine()) != null) {
