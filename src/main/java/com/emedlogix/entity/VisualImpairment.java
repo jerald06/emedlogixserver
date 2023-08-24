@@ -9,7 +9,6 @@ public class VisualImpairment {
     String rangeHeading;
     String minHeading;
     String maxHeading;
-
     List<Category> categoriesList;
 
     public String getCategoryHeading() {

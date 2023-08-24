@@ -88,31 +88,31 @@ public class ExtractorServiceImpl implements ExtractorService {
 
     @Autowired
     ESCodeInfoRepository esCodeInfoRepository;
-    
+
     @Autowired
     DBCodeDetailsRepository dbCodeDetailsRepository;
-    
+
     @Autowired
     SectionRepository sectionRepository;
-    
+
     @Autowired
     ChapterRepository chapterRepository;
 
     @Autowired
     NotesRepository notesRepository;
-    
+
     @Autowired
     EindexRepository eindexRepository;
-    
+
     @Autowired
     NeoPlasmRepository neoPlasmRepository;
-    
+
     @Autowired
     NeoPlasmCodeRepository neoPlasmCodeRepository;
-    
+
     @Autowired
     DrugRepository drugRepository;
-    
+
     @Autowired
     DrugCodeRepository drugCodeRepository;
 

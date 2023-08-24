@@ -10,9 +10,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.emedlogix.entity.*;
+import com.emedlogix.repository.*;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +39,7 @@ import com.emedlogix.repository.EindexRepository;
 import com.emedlogix.repository.SectionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.bind.annotation.RequestParam;
 
 
 @Service
@@ -51,6 +56,12 @@ public class CodeSearchService implements CodeSearchController {
 
     @Autowired
     DBCodeDetailsRepository dbCodeDetailsRepository;
+
+    @Autowired
+    ESIndexLoad esIndexLoad;
+
+    @Autowired
+    ESIndexLevelSearchRepository esIndexLevelSearchRepository;
     @Autowired
     SectionRepository sectionRepository;
     @Autowired
@@ -122,19 +133,26 @@ public class CodeSearchService implements CodeSearchController {
 	}
 
     @Override
-    public List<EindexVO> getIndexDetails(){
-        List<Map<String,Object>> allIndexData = eindexRepository.findAllIndexData();
-        return allIndexData.stream().map(m -> {
-            return populateEindexVO(m);
-        }).collect(Collectors.toList());
+    public List<Eindex> getIndexDetails(){
+        return eindexRepository.findAll();
     }
 
     @Override
-    public List<EindexVO> filterByIndex(String filterBy){
-        List<Map<String,Object>> allIndexData = eindexRepository.findAllIndexData(filterBy);
-        return allIndexData.stream().map(m -> {
-            return populateEindexVO(m);
-        }).collect(Collectors.toList());
+    public List<CodeInfo> getDescriptionDetails(String keywords) {
+        logger.info("Getting Code information Details for Keywords: {}", keywords);
+        List<CodeInfo> codeInfoList = new ArrayList<>();
+        String[] keywordArray = keywords.split(" ");
+        for (String keyword : keywordArray) {
+            Iterable<CodeInfo> codeInfoIterable = esCodeInfoRepository.findByDescriptionContaining(keyword.trim());
+            codeInfoIterable.forEach(codeInfoList::add);
+        }
+        logger.info("Got description size: {}", codeInfoList.size());
+        return codeInfoList;
+    }
+
+    @Override
+    public List<Eindex> getIndexDetailsByTitleStartingWith(String filterBy){
+        return eindexRepository.findByTitleStartingWith(filterBy);
     }
 
 
@@ -159,32 +177,6 @@ public class CodeSearchService implements CodeSearchController {
             return populateMedicalCode(m);
         }).collect(Collectors.toList());
     }
-
-/*
-    private MedicalCodeVO getParentChildHierarchyNeo(Neoplasm neoplasm){
-        MedicalCodeVO resultMedicalCodeVO = null;
-        List<Map<String,Object>> resultMap = neoPlasmRepository.getParentChildList(neoplasm.getId());
-        for (int x = 0; x < resultMap.size(); x++){
-            if (resultMedicalCodeVO == null) {
-                resultMedicalCodeVO = populateMedicalCodeNeo(resultMap.get(x));
-            } else {
-                MedicalCodeVO medicalCodeVO = populateMedicalCodeNeo(resultMap.get(x));
-                medicalCodeVO.setChild(resultMedicalCodeVO);
-                resultMedicalCodeVO = medicalCodeVO;
-            }
-        }
-        if (resultMedicalCodeVO == null) {
-            resultMedicalCodeVO = new MedicalCodeVO();
-        }
-        return resultMedicalCodeVO;
-    }
-    private MedicalCodeVO populateMedicalCodeNeo(Map<String, Object> map) {
-        MedicalCodeVO medicalCodeVO = new MedicalCodeVO();
-        medicalCodeVO.setId(Integer.parseInt(map.get("id").toString()));
-        medicalCodeVO.setTitle();
-    }
-
- */
 
 
 	@Override
