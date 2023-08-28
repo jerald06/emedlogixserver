@@ -40,7 +40,6 @@ public class ESIndexLoadImpl implements ESIndexLoad {
     @Override
     public void loadIndexLevelTerm() {
 
-
     }
 
     private EindexLevels getParentChildHierarchy(Integer id, String title) {

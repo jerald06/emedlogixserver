@@ -40,9 +40,18 @@ public interface EindexRepository extends JpaRepository<Eindex, Integer> {
 	@Query(value="SELECT e.* from eindex e join term_hierarchy t on t.child_id=e.id where t.parent_id in (select id from eindex where title in(?1) and ismainterm=true) and e.title like ?2%",nativeQuery = true)
 	List<Eindex> findSecondMainTermLevel(List<String> firstMainTerms, String title);
 
-	@Query(value="SELECT e.* from eindex e join term_hierarchy t on t.child_id=e.id where t.parent_id in (?1) and e.title like ?2%",nativeQuery = true)
-	List<Eindex> findMainTermLevels(List<Integer> ids, String levelTerm);
 
 	@Query(value="SELECT count(*) from eindex e join term_hierarchy t on t.child_id=e.id where t.parent_id=(select id from eindex where title=?1 and ismainterm=true) and e.title like ?2%",nativeQuery = true)
 	Integer mainTermHasLevelTerm(String mainTerm, String levelTerm);
+
+	List<Eindex> findByTitleStartingWith(String filterBy);
+
+
+	@Query(value = "SELECT t.parent_id as id,e.title as title,t.level as level,e.code as code,e.see as see,e.seealso as seealso,e.nemod as nemod,e.ismainterm as ismainterm from eindex e \n" +
+			"join term_hierarchy t on t.child_id=e.id where t.parent_id = :id and e.ismainterm= :ismainterm ", nativeQuery = true)
+	List<Map<String,Object>> getIndexLevelTerms(Integer id,Boolean ismainterm);
+
+	@Query(value = "SELECT t.parent_id as id,e.title as title,t.level as level,e.code as code,e.see as see,e.seealso as seealso,e.nemod as nemod,e.ismainterm as ismainterm from eindex e \n" +
+			"join term_hierarchy t on t.parent_id=e.id where t.child_id = :id and e.ismainterm= :ismainterm ", nativeQuery = true)
+	List<Map<String,Object>> getIndexMainTerms(Integer id,Boolean ismainterm);
 }

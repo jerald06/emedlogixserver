@@ -323,6 +323,17 @@ public class CodeSearchService implements CodeSearchController {
         }).collect(Collectors.toList());
     }
 
+	@Override
+	public void getLevelTerms() {
+
+		esIndexLoad.loadIndexMainTerm();
+	}
+
+	@Override
+	public EindexLevels getSearchTerm(String title) {
+		return null;
+	}
+
 	private MedicalCodeVO getDrugNeoplasmHierarchy(Map<String, Object> m,String type) {		
 		MedicalCodeVO resultMedicalCode = null;
 		List<Map<String,Object>> resultMap = new ArrayList<>();
