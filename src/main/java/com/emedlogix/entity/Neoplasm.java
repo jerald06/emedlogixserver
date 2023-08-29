@@ -21,5 +21,6 @@ public class Neoplasm {
     String see;
     String seealso;
     String nemod;
+    String version;
     Boolean ismainterm;
 }

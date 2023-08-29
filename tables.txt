@@ -72,3 +72,26 @@ CREATE TABLE drug_hierarchy (
     PRIMARY KEY (id),
     CONSTRAINT UC_term_hierarchy UNIQUE (parent_id,child_id)
 );
+
+CREATE TABLE file_status (
+    id int NOT NULL AUTO_INCREMENT,
+    file_type varchar(255) NOT NULL,
+    year int NOT NULL,
+    file_name varchar(255) NOT NULL,
+    version varchar(255) NOT NULL,
+    status varchar(255) NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT UC_file_status UNIQUE (year,file_name)
+);
+
+insert into file_status(file_type,year,file_name,version,status) values('drug',2023,'icd10cm_drug_2023.xml','2023','COMPLETED');
+insert into file_status(file_type,year,file_name,version,status) values('neoplasm',2023,'icd10cm_neoplasm_2023.xml','2023','COMPLETED');
+insert into file_status(file_type,year,file_name,version,status) values('index',2023,'icd10cm_eindex_2023.xml','2023','COMPLETED');
+insert into file_status(file_type,year,file_name,version,status) values('index',2023,'icd10cm_index_2023.xml','2023','COMPLETED');
+insert into file_status(file_type,year,file_name,version,status) values('order',2023,'icd10cm_order_2023.txt','2023','COMPLETED');
+insert into file_status(file_type,year,file_name,version,status) values('tabular',2023,'icd10cm_tabular_2023.xml','2023','COMPLETED');
+
+
+
+
+

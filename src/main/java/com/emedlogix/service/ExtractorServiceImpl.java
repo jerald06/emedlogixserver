@@ -1,7 +1,14 @@
 package com.emedlogix.service;
 
+import static com.emedlogix.util.Constants.COMPLETED;
+import static com.emedlogix.util.Constants.DRUG;
+import static com.emedlogix.util.Constants.INDEX;
+import static com.emedlogix.util.Constants.INPROGRESS;
+import static com.emedlogix.util.Constants.NEOPLASM;
+import static com.emedlogix.util.Constants.ORDER;
+import static com.emedlogix.util.Constants.TABULAR;
+
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -11,6 +18,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -18,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ResourceUtils;
 
 import com.emedlogix.codes.ChapterType;
 import com.emedlogix.codes.ContentType;
@@ -36,6 +43,7 @@ import com.emedlogix.entity.Drug;
 import com.emedlogix.entity.DrugCode;
 import com.emedlogix.entity.DrugHierarchy;
 import com.emedlogix.entity.Eindex;
+import com.emedlogix.entity.FileStatus;
 import com.emedlogix.entity.NeoPlasmCode;
 import com.emedlogix.entity.Neoplasm;
 import com.emedlogix.entity.NeoplasmHierarchy;
@@ -53,8 +61,8 @@ import com.emedlogix.repository.DBCodeDetailsRepository;
 import com.emedlogix.repository.DrugCodeRepository;
 import com.emedlogix.repository.DrugHierarchyRepository;
 import com.emedlogix.repository.DrugRepository;
-import com.emedlogix.repository.ESCodeInfoRepository;
 import com.emedlogix.repository.EindexRepository;
+import com.emedlogix.repository.FileStatusReposistory;
 import com.emedlogix.repository.NeoPlasmCodeRepository;
 import com.emedlogix.repository.NeoPlasmRepository;
 import com.emedlogix.repository.NeoplasmHierarchyRepository;
@@ -75,7 +83,7 @@ import jakarta.xml.bind.Unmarshaller;
 public class ExtractorServiceImpl implements ExtractorService {
 
     public static final Logger logger = LoggerFactory.getLogger(ExtractorServiceImpl.class);
-    
+
     @Autowired
     ESCodeInfoRepository esCodeInfoRepository;
     
@@ -114,6 +122,9 @@ public class ExtractorServiceImpl implements ExtractorService {
 
     @Autowired
     DrugHierarchyRepository drugHierarchyRepository;
+
+    @Autowired
+    FileStatusReposistory fileStatusReposistory;
 
     private List<Section> parseSection(DiagnosisType diagnosisType, String version, String icdRef, String chapterId, List<Section> sections) throws JsonProcessingException {
         List<JAXBElement<?>> inclusionTermOrSevenChrNoteOrSevenChrDef = diagnosisType.getInclusionTermOrSevenChrNoteOrSevenChrDef();
@@ -189,13 +200,21 @@ public class ExtractorServiceImpl implements ExtractorService {
 
     @Override
     public void doExtractCapterSectionXML() {
-        String fileStr = "icd10cm_tabular_2023.xml";
-        logger.info("Start Extracting Chapter Section from XML file:{}", fileStr);
+	loadCapterSectionData(2023,"icd10cm_tabular_2023.xml");
+    }
+
+    @Override
+    public void loadCapterSectionData(Integer year, String fileName) {
+        logger.info("Start Extracting Chapter Section from XML file:{}", year+"/"+fileName);
         try {
             JAXBContext context = JAXBContext.newInstance(ICD10CMTabular.class);
             ICD10CMTabular tabular = (ICD10CMTabular) context.createUnmarshaller()
-                    .unmarshal(new InputStreamReader(new ClassPathResource(fileStr).getInputStream()));
+                    .unmarshal(new InputStreamReader(new ClassPathResource(year+"/"+fileName).getInputStream()));
             String version = tabular.getVersion().getContent().get(0).toString();
+            if(isFileCompletedOrProgress(TABULAR, year, fileName, version)) {
+		return;
+		}
+            FileStatus fieStatus = fileStatusReposistory.save(populateFileStatus(TABULAR,year,fileName,INPROGRESS,version));
             String icdtitle = tabular.getIntroduction().getIntroSection().get(0).getTitle().getContent().get(0).toString();
             icdtitle = icdtitle.substring(icdtitle.indexOf(" "));
             //icd_id: tabular.getIntroduction().getIntroSection().get(0).getTitle().getContent().get(0);
@@ -262,6 +281,8 @@ public class ExtractorServiceImpl implements ExtractorService {
                 //save chapter
                 logger.info("Saving Chanpter :{}", chapter.getId());
                 chapterRepository.save(chapter);
+                fieStatus.setStatus(COMPLETED);
+                fileStatusReposistory.save(fieStatus);
             }
         } catch (Exception e) {
             //TODO cathc the right exception and log it
@@ -270,14 +291,32 @@ public class ExtractorServiceImpl implements ExtractorService {
         logger.info("Chapter section from XML successfully extracted:");
     }
 
+	private boolean isFileCompletedOrProgress(String fileType, Integer year, String fileName, String version) {
+		FileStatus fileStatus = fileStatusReposistory.findFileStatus(fileType, year, fileName, version);
+		if (fileStatus != null && (fileStatus.getStatus().equalsIgnoreCase(INPROGRESS)
+				|| fileStatus.getStatus().equalsIgnoreCase(COMPLETED))) {
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public void doExtractOrderedCodes() {
+		loadOrderedCodesData(2023, "icd10cm_order_2023.txt");
+	}
+
     @Override
-    public void doExtractOrderedCodes() {
-        String fileStr = "icd10cm_order_2023.txt";
-        logger.info("Start Extracting Ordered Codes from file {}", fileStr);
+    public void loadOrderedCodesData(Integer year,String fileName) {
+        logger.info("Start Extracting Ordered Codes from file {}", fileName);
         Map<String, CodeDetails> codeDetailsMap = new HashMap<>();
         Map<String, CodeInfo> codeMap = new HashMap<>();
+        FileStatus fieStatus = null;
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(new ClassPathResource(fileStr).getInputStream()));//new BufferedReader(new FileReader(ResourceUtils.getFile("classpath:icd10cm_order_2023.txt")));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new ClassPathResource(year+"/"+fileName).getInputStream()));
+			if (isFileCompletedOrProgress(ORDER, year, fileName, year + "")) {
+				return;
+			}
+			fieStatus = fileStatusReposistory.save(populateFileStatus(ORDER, year, fileName, INPROGRESS, year + ""));
             String line;
             List<String> lines = new ArrayList<>();
             while ((line = reader.readLine()) != null) {
@@ -295,6 +334,10 @@ public class ExtractorServiceImpl implements ExtractorService {
         }
         doSaveCodesToES(codeMap);
         doSaveOrderedCodesToDB(codeDetailsMap);
+		if (fieStatus != null) {
+			fieStatus.setStatus(COMPLETED);
+			fileStatusReposistory.save(fieStatus);
+		}
         logger.info("Code details successfully extracted ordered codes {}", codeDetailsMap.size());
 
     }
@@ -379,13 +422,19 @@ public class ExtractorServiceImpl implements ExtractorService {
     }
 
 	@Override
-	public void doExtractNeoplasm() {//icd10cm_neoplasm_2023.xml,test_neoplasm.xml
-		Object obj = parseXML("icd10cm_neoplasm_2023.xml", ICD10CMIndex.class);
+	public void loadNeoplasmData(Integer year, String fileName) {
+		Object obj = parseXML(year+"/"+fileName, ICD10CMIndex.class);
 		if(obj instanceof ICD10CMIndex) {
 			ICD10CMIndex icd10CMIndex = (ICD10CMIndex)obj;
+			String version = icd10CMIndex.getVersion();
+			if (isFileCompletedOrProgress(NEOPLASM, year, fileName, version)) {
+				return;
+			}
+			FileStatus fieStatus = fileStatusReposistory
+					.save(populateFileStatus(NEOPLASM, year, fileName, INPROGRESS, version));
 			icd10CMIndex.getLetter().stream().forEach(l -> {
 				l.getMainTerm().stream().forEach(m -> {
-					final Neoplasm neoplasmOne = populateNeoPlasmMainTerm(m);
+					final Neoplasm neoplasmOne = populateNeoPlasmMainTerm(m,version);
 
 					// store neoplasm hierarchy
 					List<Integer> ids = new ArrayList<>();
@@ -402,14 +451,16 @@ public class ExtractorServiceImpl implements ExtractorService {
 					neoPlasmCodeRepository.saveAll(neoplasmCodes);
 
 					if(!m.getTerm().isEmpty()) {
-						parseNeoPlasmLevelTerm(m.getTerm(),ids);
+						parseNeoPlasmLevelTerm(m.getTerm(),ids,version);
 					}
 				});
 			});
+			fieStatus.setStatus(COMPLETED);
+			fileStatusReposistory.save(fieStatus);
 		}
 	}
 
-	private Neoplasm populateNeoPlasmMainTerm(MainTerm m) {
+	private Neoplasm populateNeoPlasmMainTerm(MainTerm m,String version) {
 		Neoplasm neoplasm = new Neoplasm();
 		neoplasm.setTitle(m.getTitle().getContent().get(0).toString());
 		if(m.getTitle().getContent().size()>1) {
@@ -418,6 +469,7 @@ public class ExtractorServiceImpl implements ExtractorService {
 		neoplasm.setSee(m.getSee());
 		neoplasm.setSeealso(m.getSeeAlso());
 		neoplasm.setIsmainterm(true);
+		neoplasm.setVersion(version);
 		return neoPlasmRepository.save(neoplasm);
 	}
 
@@ -434,9 +486,9 @@ public class ExtractorServiceImpl implements ExtractorService {
 		return new Object();
 	}
 
-	private void parseNeoPlasmLevelTerm(List<Term> termType, List<Integer> ids) {
+	private void parseNeoPlasmLevelTerm(List<Term> termType, List<Integer> ids,String version) {
 		termType.forEach(a -> {
-			final Neoplasm neoplasm = populateNeoPlasmLavelTerm(a);
+			final Neoplasm neoplasm = populateNeoPlasmLavelTerm(a,version);
 
 			//store hierarchy
 			if(a.getLevel() == ids.size()) {
@@ -463,7 +515,7 @@ public class ExtractorServiceImpl implements ExtractorService {
 			neoPlasmCodeRepository.saveAll(neoplasmCodes);
 
 			if(!a.getTerm().isEmpty()) {
-				parseNeoPlasmLevelTerm(a.getTerm(),ids);
+				parseNeoPlasmLevelTerm(a.getTerm(),ids,version);
 			}
 		});
 	}
@@ -475,7 +527,7 @@ public class ExtractorServiceImpl implements ExtractorService {
 		neoplasmCodes.add(neoPlasmCode);
 	}
 
-	private Neoplasm populateNeoPlasmLavelTerm(Term a) {
+	private Neoplasm populateNeoPlasmLavelTerm(Term a,String version) {
 		Neoplasm neoplasm = new Neoplasm();
 		neoplasm.setTitle(a.getTitle().getContent().get(0).toString());
 		if(a.getTitle().getContent().size()>1) {
@@ -484,33 +536,44 @@ public class ExtractorServiceImpl implements ExtractorService {
 		neoplasm.setSee(a.getSee());
 		neoplasm.setSeealso(a.getSeeAlso());
 		neoplasm.setIsmainterm(false);
+		neoplasm.setVersion(version);
 		return neoPlasmRepository.save(neoplasm);
 	}
 
 	@Override
 	public void doExtractIndex() {//test_index.xml, icd10cm_index_2023.xml,icd10cm_eindex_2023.xml
-		parseIndexesFile(parseXML("icd10cm_eindex_2023.xml",ICD10CMIndex.class));
-		parseIndexesFile(parseXML("icd10cm_index_2023.xml",ICD10CMIndex.class));
+		loadIndexData(2023,"icd10cm_eindex_2023.xml");
+		loadIndexData(2023,"icd10cm_index_2023.xml");
 	}
 
-	private void parseIndexesFile(Object obj) {
+	@Override
+	public void loadIndexData(Integer year, String fileName) {
+		Object obj = parseXML(year+"/"+fileName,ICD10CMIndex.class);
 		if(obj instanceof ICD10CMIndex) {
 			ICD10CMIndex icd10CMIndex = (ICD10CMIndex)obj;
+			String version = icd10CMIndex.getVersion();
+			if (isFileCompletedOrProgress(INDEX, year, fileName, version)) {
+				return;
+			}
+			FileStatus fieStatus = fileStatusReposistory
+					.save(populateFileStatus(INDEX, year, fileName, INPROGRESS, version));
 			icd10CMIndex.getLetter().stream().forEach(l -> {
 				l.getMainTerm().stream().forEach(m -> {
-					Eindex index = populateAndSaveEIndex(m);
+					Eindex index = populateAndSaveEIndex(m,version);
 					List<Integer> ids = new ArrayList<>();
 					ids.add(index.getId());
 					populateAndSaveHierarchy(index.getId(),index.getId(),0);
 					if(!m.getTerm().isEmpty()) {
-						parseEIndexLevelTerm(m.getTerm(),ids);
+						parseEIndexLevelTerm(m.getTerm(),ids,version);
 					}
 				});
 			});
+			fieStatus.setStatus(COMPLETED);
+			fileStatusReposistory.save(fieStatus);
 		}
 	}
 
-	private Eindex populateAndSaveEIndex(MainTerm m) {
+	private Eindex populateAndSaveEIndex(MainTerm m,String version) {
 		Eindex eIndex = new Eindex();
 		eIndex.setTitle(m.getTitle().getContent().get(0).toString());
 		if(m.getTitle().getContent().size()>1) {
@@ -521,6 +584,7 @@ public class ExtractorServiceImpl implements ExtractorService {
 		eIndex.setSeealso(m.getSeeAlso());
 		eIndex.setSeecat(m.getSeecat());
 		eIndex.setIsmainterm(true);
+		eIndex.setVersion(version);
 		return eindexRepository.save(eIndex);
 	}
 
@@ -532,9 +596,9 @@ public class ExtractorServiceImpl implements ExtractorService {
 		hierarchyRepository.save(termHierarchy);
 	}
 
-	private void parseEIndexLevelTerm(List<Term> term, List<Integer> ids) {
+	private void parseEIndexLevelTerm(List<Term> term, List<Integer> ids,String version) {
 		term.forEach(a -> {
-			Eindex index = populateAndSaveEIndexLevelTerm(a);
+			Eindex index = populateAndSaveEIndexLevelTerm(a,version);
 			if(a.getLevel() == ids.size()) {
 				ids.add(index.getId());
 			} else {
@@ -549,13 +613,13 @@ public class ExtractorServiceImpl implements ExtractorService {
 				level++;
 			}
 			if(!a.getTerm().isEmpty()) {
-				parseEIndexLevelTerm(a.getTerm(),ids);
+				parseEIndexLevelTerm(a.getTerm(),ids,version);
 			}
 
 		});
 	}
 
-	private Eindex populateAndSaveEIndexLevelTerm(Term m) {
+	private Eindex populateAndSaveEIndexLevelTerm(Term m,String version) {
 		Eindex eIndex = new Eindex();
 		eIndex.setTitle(m.getTitle().getContent().get(0).toString());
 		if(m.getTitle().getContent().size()>1) {
@@ -566,17 +630,24 @@ public class ExtractorServiceImpl implements ExtractorService {
 		eIndex.setSeealso(m.getSeeAlso());
 		eIndex.setSeecat(m.getSeecat());
 		eIndex.setIsmainterm(false);
+		eIndex.setVersion(version);
 		return eindexRepository.save(eIndex);
 	}
 
 	@Override
-	public void doExtractDrug() {//icd10cm_drug_2023.xml, test_drug.xml
-		Object obj = parseXML("icd10cm_drug_2023.xml", ICD10CMIndex.class);
+	public void loadDrugData(Integer year, String fileName) {//icd10cm_drug_2023.xml, test_drug.xml
+		Object obj = parseXML(year+"/"+fileName, ICD10CMIndex.class);
 		if(obj instanceof ICD10CMIndex) {
 			ICD10CMIndex icd10CMIndex = (ICD10CMIndex)obj;
+			String version = icd10CMIndex.getVersion();
+			if (isFileCompletedOrProgress(DRUG, year, fileName, version)) {
+				return;
+			}
+			FileStatus fieStatus = fileStatusReposistory
+					.save(populateFileStatus(DRUG, year, fileName, INPROGRESS, version));
 			icd10CMIndex.getLetter().stream().forEach(l -> {
 				l.getMainTerm().stream().forEach(m -> {
-					final Drug drug = populateDrugMainTerm(m);
+					final Drug drug = populateDrugMainTerm(m,version);
 
 					//save drug hierarchy
 					List<Integer> ids = new ArrayList<>();
@@ -592,14 +663,16 @@ public class ExtractorServiceImpl implements ExtractorService {
 					drugCodeRepository.saveAll(drugCodes);
 
 					if(!m.getTerm().isEmpty()) {
-						parseDrugLevelTerm(m.getTerm(), ids);
+						parseDrugLevelTerm(m.getTerm(), ids,version);
 					}
 				});
 			});
+			fieStatus.setStatus(COMPLETED);
+			fileStatusReposistory.save(fieStatus);
 		}
 	}
 
-	private Drug populateDrugMainTerm(MainTerm m) {
+	private Drug populateDrugMainTerm(MainTerm m,String version) {
 		Drug drug = new Drug();
 		drug.setTitle(m.getTitle().getContent().get(0).toString());
 		if(m.getTitle().getContent().size()>1) {
@@ -608,6 +681,7 @@ public class ExtractorServiceImpl implements ExtractorService {
 		drug.setSee(m.getSee());
 		drug.setSeealso(m.getSeeAlso());
 		drug.setIsmainterm(true);
+		drug.setVersion(version);
 		return drugRepository.save(drug);
 	}
 
@@ -618,9 +692,9 @@ public class ExtractorServiceImpl implements ExtractorService {
 		drugCodes.add(drugCode);
 	}
 
-	private void parseDrugLevelTerm(List<Term> termType, List<Integer> ids) {
+	private void parseDrugLevelTerm(List<Term> termType, List<Integer> ids,String version) {
 		termType.forEach(a -> {
-			final Drug drug = populateDrugLevelTerm(a);
+			final Drug drug = populateDrugLevelTerm(a,version);
 
 			//store drug hierarchy
 			if(a.getLevel() == ids.size()) {
@@ -647,12 +721,12 @@ public class ExtractorServiceImpl implements ExtractorService {
 			drugCodeRepository.saveAll(drugCodes);
 
 			if(!a.getTerm().isEmpty()) {
-				parseDrugLevelTerm(a.getTerm(), ids);
+				parseDrugLevelTerm(a.getTerm(), ids, version);
 			}
 		});
 	}
 
-	private Drug populateDrugLevelTerm(Term a) {
+	private Drug populateDrugLevelTerm(Term a,String version) {
 		Drug drug = new Drug();
 		drug.setTitle(a.getTitle().getContent().get(0).toString());
 		if(a.getTitle().getContent().size()>1) {
@@ -661,6 +735,7 @@ public class ExtractorServiceImpl implements ExtractorService {
 		drug.setSee(a.getSee());
 		drug.setSeealso(a.getSeeAlso());
 		drug.setIsmainterm(false);
+		drug.setVersion(version);
 		return drugRepository.save(drug);
 	}
 
@@ -693,6 +768,26 @@ public class ExtractorServiceImpl implements ExtractorService {
 		neoplasmHierarchy.setChildId(childId);
 		neoplasmHierarchy.setLevel(level);
 		neoplasmHierarchyRepository.save(neoplasmHierarchy);
+	}
+
+	@Override
+	public void doExtractNeoplasm() {
+		loadNeoplasmData(2023,"icd10cm_neoplasm_2023.xml");
+	}
+
+	@Override
+	public void doExtractDrug() {
+		loadDrugData(2023,"icd10cm_drug_2023.xml");
+	}
+
+	private FileStatus populateFileStatus(String fileType, Integer year, String fileName,String status,String version) {
+		FileStatus fileStatus = new FileStatus();
+		fileStatus.setFileType(fileType);
+		fileStatus.setYear(year);
+		fileStatus.setFileName(fileName);
+		fileStatus.setStatus(status);
+		fileStatus.setVersion(version);
+		return fileStatus;
 	}
 }
 

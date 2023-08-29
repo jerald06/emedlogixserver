@@ -25,5 +25,6 @@ public class Eindex {
     String seealso;
     String seecat;
     String nemod;
+    String version;
     Boolean ismainterm;
 }

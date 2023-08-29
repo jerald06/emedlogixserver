@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ExtractorScheduler {
     public static final Logger logger = LoggerFactory.getLogger(ExtractorScheduler.class);
+
     @Autowired
     ExtractorService extractorService;
 

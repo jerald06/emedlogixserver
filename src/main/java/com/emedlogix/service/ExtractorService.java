@@ -12,4 +12,14 @@ public interface ExtractorService {
     void doExtractNeoplasm();
     
     void doExtractDrug();
+
+	void loadIndexData(Integer year,String fileName);
+
+	void loadNeoplasmData(Integer year,String fileName);
+
+	void loadDrugData(Integer year,String fileName);
+
+	void loadCapterSectionData(Integer year, String fileName);
+
+	void loadOrderedCodesData(Integer year, String fileName);
 }
