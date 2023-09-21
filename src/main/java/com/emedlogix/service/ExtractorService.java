@@ -13,6 +13,8 @@ public interface ExtractorService {
     
     void doExtractDrug();
 
+    void doExtractAlternateTermXLSX();
+
 	void loadIndexData(Integer year,String fileName);
 
 	void loadNeoplasmData(Integer year,String fileName);
@@ -22,4 +24,6 @@ public interface ExtractorService {
 	void loadCapterSectionData(Integer year, String fileName);
 
 	void loadOrderedCodesData(Integer year, String fileName);
+    void loadAlternateTermsData(Integer year, String fileName);
+
 }

@@ -9,4 +9,5 @@ public class Constants {
     public static final String INDEX = "index";
     public static final String TABULAR = "tabular";
     public static final String ORDER = "order";
+    public static final String ALTERNATE_TERMS = "Alternate_Terms";
 }

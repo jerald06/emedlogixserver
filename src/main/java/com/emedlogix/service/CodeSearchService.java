@@ -48,8 +48,8 @@ public class CodeSearchService implements CodeSearchController {
     public static final Logger logger = LoggerFactory.getLogger(CodeSearchService.class);
     private static final String INDEX_NAME = "details";
     private static final String FIELD_NAME = "code";
-    private Map<String,Object> indexMap = null;
-	private String code = null;
+    private Map<String, Object> indexMap = null;
+    private String code = null;
 
     @Autowired
     ESCodeInfoRepository esCodeInfoRepository;
@@ -58,15 +58,10 @@ public class CodeSearchService implements CodeSearchController {
     DBCodeDetailsRepository dbCodeDetailsRepository;
 
     @Autowired
-    ESIndexLoad esIndexLoad;
-
-    @Autowired
-    ESIndexLevelSearchRepository esIndexLevelSearchRepository;
-    @Autowired
     SectionRepository sectionRepository;
     @Autowired
     ChapterRepository chapterRepository;
-    
+
     @Autowired
     NeoPlasmRepository neoPlasmRepository;
 
@@ -75,6 +70,9 @@ public class CodeSearchService implements CodeSearchController {
 
     @Autowired
     EindexRepository eindexRepository;
+
+    @Autowired
+    ESAlterTermRepository esAlterTermRepository;
 
     @Override
     public CodeInfo getCodeInfo(String code) {
@@ -99,41 +97,38 @@ public class CodeSearchService implements CodeSearchController {
     @Override
     public List<CodeInfo> getCodeInfoDescription(String description) {
         logger.info("Getting Code Information for Description ", description);
+        String[] words = description.split(" \\s+");
         List<CodeInfo> codeInfoList = new ArrayList<>();
-        Iterable<CodeInfo> codeInfos = esCodeInfoRepository.findByDescriptionContains(description);
-        Iterator<CodeInfo> iterator = codeInfos.iterator();
-        while (iterator.hasNext()){
-            CodeInfo codeInfo  = iterator.next();
-            codeInfoList.add(codeInfo);
+        for (String word : words) {
+            List<CodeInfo> wordMatches = esCodeInfoRepository.findByDescriptionFuzzy(word);
+            codeInfoList.addAll(wordMatches);
         }
-        logger.info("Got matching description :",codeInfoList.size());
+        logger.info("Got matching description :", codeInfoList.size());
         return codeInfoList;
     }
 
-    public CodeDetails getCodeInfoDetails(@PathVariable String code, @RequestParam String version){
+    public CodeDetails getCodeInfoDetails(@PathVariable String code, @RequestParam String version) {
         logger.info("Getting Code Information Details for code:", code);
         CodeDetails codeDetails = dbCodeDetailsRepository.findByCode(code);
-        Section section = sectionRepository.findByCodeAndVersion(code,version);
-        if(section != null) {
+        Section section = sectionRepository.findByCodeAndVersion(code, version);
+        if (section != null) {
             codeDetails.setSection(section);
             chapterRepository.findById(section.getChapterId()).ifPresent(value -> {
                 codeDetails.setChapter(value);
             });
         }
-        //codeDetails.setChapter(.get());
         return codeDetails;
     }
 
-
-	@Override
-	public List<EindexVO> getEIndex(String code) {
-		return eindexRepository.findMainTermBySearch(code).stream().map(m -> {
-			return getParentChildHierarchy(m);
-		}).collect(Collectors.toList());
-	}
+    @Override
+    public List<EindexVO> getEIndex(String code) {
+        return eindexRepository.findMainTermBySearch(code).stream().map(m -> {
+            return getParentChildHierarchy(m);
+        }).collect(Collectors.toList());
+    }
 
     @Override
-    public List<Eindex> getIndexDetails(){
+    public List<Eindex> getIndexDetails() {
         return eindexRepository.findAll();
     }
 
@@ -151,260 +146,273 @@ public class CodeSearchService implements CodeSearchController {
     }
 
     @Override
-    public List<Eindex> getIndexDetailsByTitleStartingWith(String filterBy){
+    public List<Eindex> getIndexDetailsByTitleStartingWith(String filterBy) {
         return eindexRepository.findByTitleStartingWith(filterBy);
     }
 
 
-	@Override
-	public List<MedicalCodeVO> getNeoPlasm(String code) {
-		return neoPlasmRepository.findNeoplasmByCode(code).stream().map(m -> {
-			return getDrugNeoplasmHierarchy(m,"neoplasm");
-		}).collect(Collectors.toList());
-	}
     @Override
-    public List<MedicalCodeVO> getNeoplasmDetails(){
-        List<Map<String,Object>> allNeoplasmData = neoPlasmRepository.findAllNeoplasmData();
-        return allNeoplasmData.stream().map(m->{
-            return populateMedicalCode(m);
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public List<MedicalCodeVO> filterNeoplasmDetails(String filterBy){
-        List<Map<String,Object>> allNeoplasmData = neoPlasmRepository.filterNeoplasmData(filterBy);
-        return allNeoplasmData.stream().map(m->{
-            return populateMedicalCode(m);
+    public List<MedicalCodeVO> getNeoPlasm(String code) {
+        return neoPlasmRepository.findNeoplasmByCode(code).stream().map(m -> {
+            return getDrugNeoplasmHierarchy(m, "neoplasm");
         }).collect(Collectors.toList());
     }
 
 
-	@Override
-	public List<MedicalCodeVO> getDrug(String code) {
-		return drugRepository.findDrugByCode(code).stream().map(m -> {
-			return getDrugNeoplasmHierarchy(m,"drug");
-		}).collect(Collectors.toList());
-	}
+    @Override
+    public List<MedicalCodeVO> getNeoplasmDetails(String title) {
+        List<Map<String, Object>> allNeoplasmData;
+        if (title != null && !title.isEmpty()) {
+            String titlePattern = "^" + title.toLowerCase();
+            allNeoplasmData = neoPlasmRepository.findNeoplasmDataByTitle(titlePattern);
+        } else {
+            allNeoplasmData = neoPlasmRepository.findAllNeoplasmData();
+        }
+        return allNeoplasmData.stream().map(this::populateMedicalCode).collect(Collectors.toList());
 
-	@Override
-	public List<EindexVO> getEIndexByNameSearch(String name,boolean mainTermSearch) {
-		String[] names = name.trim().split(" ");
-		if(names.length>1 && names.length == 2) {
-			return multipleSearch(names, mainTermSearch);
-		} else {
-			if(mainTermSearch) {
-				return singleMainTermSearch(names[0]);
-			}
-			else {
-				return singleLevelTermSearch(names[0]);
-			}
-		}
-	}
+    }
 
-	private List<EindexVO> multipleSearch(String[] names, boolean mainTermSearch) {
-		List<EindexVO> result = new ArrayList<>();
-		if(mainTermSearch) {
-			List<Eindex> mainTermResult = eindexRepository.findMainTerm(names[0]);
-			if(mainTermResult.size()==0) {
-				return result;
-			}
-			List<String> mainTermSeeSeeAlso = new ArrayList<>();
-			mainTermResult.forEach( e -> {
-				getMainTermSeeAndSeealso(e,mainTermSeeSeeAlso);
-			});
-			//mainTerm mainTerm(See/See Also term of main term has 2nd main term)
-			if(mainTermSeeSeeAlso.contains(names[1])) {
-				return mainTermResult.stream().map(i -> {
-					return extractEintexVO(i);
-				}).collect(Collectors.toList());
-			}
-			//mainTerm LevelTermof1stTerm
-			Integer resultCount = eindexRepository.mainTermHasLevelTerm(names[0],names[1]);
-			if(resultCount>0) {
-				result = singleMainTermSearch(names[0]);
-			}
-			if(result.size()>0) {
-				return result;
-			}
-			//mainTerm NotLevelTermof1stTerm(Show if See/See Also term of main term have the level term entered)
-			result = eindexRepository.findSecondMainTermLevel(mainTermSeeSeeAlso,names[1]).stream().map(i -> {
-				return extractEintexVO(i);
-			}).collect(Collectors.toList());
-			if(result.size()>0) {
-				return result;
-			}
 
-			//mainTerm mainTerm(Else show all Level terms applicable for 2nd main term)
-			result = singleMainTermSearch(names[1]);
-			if(result.size()>0) {
-				return result;
-			}
+    @Override
+    public List<MedicalCodeVO> filterNeoplasmDetails(String filterBy) {
+        List<Map<String, Object>> allNeoplasmData = neoPlasmRepository.filterNeoplasmData(filterBy);
+        return allNeoplasmData.stream().map(m -> {
+            return populateMedicalCode(m);
+        }).collect(Collectors.toList());
+    }
 
-			//mainTerm NotLevelTermof1stTerm(Else show all main terms associated with the level term entered)
-			result = singleLevelTermSearch(names[1]);
-			if(result.size()>0) {
-				return result;
-			}
-			//mainTerm NotinIndextable(Else show all Level(1st level) terms applicable for 1st main term)
-			result = singleMainTermSearch(names[0]);
-			if(result.size()>0) {
-				return result;
-			}
 
-		} else {
-			//LevelTerm Maintermof1stterm
-			Integer resultCount = eindexRepository.mainTermHasLevelTerm(names[1],names[0]);
-			if(resultCount>0) {
-				result = singleMainTermSearch(names[1]);
-			}
-			if(result.size()>0) {
-				return result;
-			}
-			//LevelTerm NotinIndextable
-			result = singleLevelTermSearch(names[0]);
-			if(result.size()>0) {
-				return result;
-			}
-		}
-		return result;
-	}
+    @Override
+    public List<MedicalCodeVO> getDrug(String code) {
+        return drugRepository.findDrugByCode(code).stream().map(m -> {
+            return getDrugNeoplasmHierarchy(m, "drug");
+        }).collect(Collectors.toList());
+    }
 
-	private EindexVO extractEintexVO(Eindex i) {
-		ObjectMapper mapper = new ObjectMapper();
-		Map<String, Object> map = mapper.convertValue(i, new TypeReference<Map<String, Object>>() {});
-		return populateEindexVO(map);
-	}
+    public List<MedicalCodeVO> getDrugDetails(String title) {
+        List<Map<String, Object>> allDrugData;
+        if (title != null && !title.isEmpty()) {
+            String titlePattern = "^" + title.toLowerCase();
+            allDrugData = drugRepository.findDrugByTitle(titlePattern);
+        } else {
+            allDrugData = drugRepository.findAllDrugData();
+        }
+        return allDrugData.stream().map(this::populateMedicalCode).collect(Collectors.toList());
+    }
 
-	private void getMainTermSeeAndSeealso(Eindex eindex,List<String> mainTermsTitle){
-		if(eindex.getSee()!=null) {
-			mainTermsTitle.addAll(Arrays.asList(eindex.getSee().split(",")));
-		}
-		if(eindex.getSeealso()!=null) {
-			mainTermsTitle.addAll(Arrays.asList(eindex.getSeealso().split(",")));
-		}
-	}
+    @Override
+    public List<EindexVO> getEIndexByNameSearch(String name, boolean mainTermSearch) {
+        String[] names = name.trim().split(" ");
+        if (names.length > 1 && names.length == 2) {
+            return multipleSearch(names, mainTermSearch);
+        } else {
+            if (mainTermSearch) {
+                return singleMainTermSearch(names[0]);
+            } else {
+                return singleLevelTermSearch(names[0]);
+            }
+        }
+    }
 
-	private List<EindexVO> singleLevelTermSearch(String name) {
-		List<EindexVO> indexList = new ArrayList<>();
-		eindexRepository.searchLevelTermMainTerm(name).forEach(map -> {
-			if(indexMap!=null && Integer.parseInt(indexMap.get("childId").toString())!=Integer.parseInt(map.get("childId").toString())) {
-				indexList.add(populateEindexVO(indexMap,code));
-				code = null;
-			}
-			indexMap = map;
-			if(map.get("code")!=null) {
-				code = map.get("code").toString();
-			}
-		});
-		indexList.add(populateEindexVO(indexMap,code));
-		List<EindexVO> resultIndex = indexList.stream().filter(distinctByKey(p -> p.getId()))
-				.collect(Collectors.toList());
-		resultIndex.sort(Comparator.comparing(m -> m.getTitle(),
-				Comparator.nullsLast(Comparator.naturalOrder())
-		));
-		return resultIndex;
-	}
+    @Override
+    public List<AlterTerm> searchByAlterDescription(String alterDescription) {
+        return esAlterTermRepository.findByAlterDescription(alterDescription);
+    }
 
-	public static <T> Predicate<T> distinctByKey(Function<? super T, Object> keyExtractor) {
-		Map<Object, Boolean> map = new ConcurrentHashMap<>();
-		return t -> map.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
-	}
+    private List<EindexVO> multipleSearch(String[] names, boolean mainTermSearch) {
+        List<EindexVO> result = new ArrayList<>();
+        if (mainTermSearch) {
+            List<Eindex> mainTermResult = eindexRepository.findMainTerm(names[0]);
+            if (mainTermResult.size() == 0) {
+                return result;
+            }
+            List<String> mainTermSeeSeeAlso = new ArrayList<>();
+            mainTermResult.forEach(e -> {
+                getMainTermSeeAndSeealso(e, mainTermSeeSeeAlso);
+            });
+            //mainTerm mainTerm(See/See Also term of main term has 2nd main term)
+            if (mainTermSeeSeeAlso.contains(names[1])) {
+                return mainTermResult.stream().map(i -> {
+                    return extractEintexVO(i);
+                }).collect(Collectors.toList());
+            }
+            //mainTerm LevelTermof1stTerm
+            Integer resultCount = eindexRepository.mainTermHasLevelTerm(names[0], names[1]);
+            if (resultCount > 0) {
+                result = singleMainTermSearch(names[0]);
+            }
+            if (result.size() > 0) {
+                return result;
+            }
+            //mainTerm NotLevelTermof1stTerm(Show if See/See Also term of main term have the level term entered)
+            result = eindexRepository.findSecondMainTermLevel(mainTermSeeSeeAlso, names[1]).stream().map(i -> {
+                return extractEintexVO(i);
+            }).collect(Collectors.toList());
+            if (result.size() > 0) {
+                return result;
+            }
 
-	private List<EindexVO> singleMainTermSearch(String name) {
-		return eindexRepository.searchMainTermLevelOne(name).stream().map(m -> {
-			return populateEindexVO(m);
-		}).collect(Collectors.toList());
-	}
+            //mainTerm mainTerm(Else show all Level terms applicable for 2nd main term)
+            result = singleMainTermSearch(names[1]);
+            if (result.size() > 0) {
+                return result;
+            }
 
-    public List<MedicalCodeVO> getDrugDetails(){
-        List<Map<String,Object>> allDrugData = drugRepository.findAllDrugData();
+            //mainTerm NotLevelTermof1stTerm(Else show all main terms associated with the level term entered)
+            result = singleLevelTermSearch(names[1]);
+            if (result.size() > 0) {
+                return result;
+            }
+            //mainTerm NotinIndextable(Else show all Level(1st level) terms applicable for 1st main term)
+            result = singleMainTermSearch(names[0]);
+            if (result.size() > 0) {
+                return result;
+            }
+
+        } else {
+            //LevelTerm Maintermof1stterm
+            Integer resultCount = eindexRepository.mainTermHasLevelTerm(names[1], names[0]);
+            if (resultCount > 0) {
+                result = singleMainTermSearch(names[1]);
+            }
+            if (result.size() > 0) {
+                return result;
+            }
+            //LevelTerm NotinIndextable
+            result = singleLevelTermSearch(names[0]);
+            if (result.size() > 0) {
+                return result;
+            }
+        }
+        return result;
+    }
+
+    private EindexVO extractEintexVO(Eindex i) {
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, Object> map = mapper.convertValue(i, new TypeReference<Map<String, Object>>() {
+        });
+        return populateEindexVO(map);
+    }
+
+    private void getMainTermSeeAndSeealso(Eindex eindex, List<String> mainTermsTitle) {
+        if (eindex.getSee() != null) {
+            mainTermsTitle.addAll(Arrays.asList(eindex.getSee().split(",")));
+        }
+        if (eindex.getSeealso() != null) {
+            mainTermsTitle.addAll(Arrays.asList(eindex.getSeealso().split(",")));
+        }
+    }
+
+    private List<EindexVO> singleLevelTermSearch(String name) {
+        List<EindexVO> indexList = new ArrayList<>();
+        eindexRepository.searchLevelTermMainTerm(name).forEach(map -> {
+            if (indexMap != null && Integer.parseInt(indexMap.get("childId").toString()) != Integer.parseInt(map.get("childId").toString())) {
+                indexList.add(populateEindexVO(indexMap, code));
+                code = null;
+            }
+            indexMap = map;
+            if (map.get("code") != null) {
+                code = map.get("code").toString();
+            }
+        });
+        indexList.add(populateEindexVO(indexMap, code));
+        List<EindexVO> resultIndex = indexList.stream().filter(distinctByKey(p -> p.getId()))
+                .collect(Collectors.toList());
+        resultIndex.sort(Comparator.comparing(m -> m.getTitle(),
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ));
+        return resultIndex;
+    }
+
+    public static <T> Predicate<T> distinctByKey(Function<? super T, Object> keyExtractor) {
+        Map<Object, Boolean> map = new ConcurrentHashMap<>();
+        return t -> map.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
+    }
+
+    private List<EindexVO> singleMainTermSearch(String name) {
+        return eindexRepository.searchMainTermLevelOne(name).stream().map(m -> {
+            return populateEindexVO(m);
+        }).collect(Collectors.toList());
+    }
+
+    public List<MedicalCodeVO> getDrugDetails() {
+        List<Map<String, Object>> allDrugData = drugRepository.findAllDrugData();
         return allDrugData.stream().map(m -> {
             return populateMedicalCode(m);
         }).collect(Collectors.toList());
     }
 
-	@Override
-	public void getLevelTerms() {
+    private MedicalCodeVO getDrugNeoplasmHierarchy(Map<String, Object> m, String type) {
+        MedicalCodeVO resultMedicalCode = null;
+        List<Map<String, Object>> resultMap = new ArrayList<>();
+        if (type == "neoplasm") {
+            resultMap = neoPlasmRepository.getParentChildList(Integer.valueOf(String.valueOf(m.get("id"))));
+        } else if (type == "drug") {
+            resultMap = drugRepository.getParentChildList(Integer.valueOf(String.valueOf(m.get("id"))));
+        }
+        for (int x = 0; x < resultMap.size(); x++) {
+            if (resultMedicalCode == null) {
+                resultMedicalCode = populateMedicalCode(m);
+            } else {
+                MedicalCodeVO medicalCode = populateMedicalCode(resultMap.get(x));
+                medicalCode.setChild(resultMedicalCode);
+                resultMedicalCode = medicalCode;
+            }
+        }
+        if (resultMedicalCode == null) {
+            resultMedicalCode = new MedicalCodeVO();
+        }
 
-		esIndexLoad.loadIndexMainTerm();
-	}
+        return resultMedicalCode;
+    }
 
-	@Override
-	public EindexLevels getSearchTerm(String title) {
-		return null;
-	}
+    private EindexVO getParentChildHierarchy(Eindex eindex) {
+        EindexVO resultEindexVO = null;
+        List<Map<String, Object>> resultMap = eindexRepository.getParentChildList(eindex.getId());
+        for (int x = 0; x < resultMap.size(); x++) {
+            if (resultEindexVO == null) {
+                resultEindexVO = populateEindexVO(resultMap.get(x));
+            } else {
+                EindexVO eindexVO = populateEindexVO(resultMap.get(x));
+                eindexVO.setChild(resultEindexVO);
+                resultEindexVO = eindexVO;
+            }
+        }
+        if (resultEindexVO == null) {
+            resultEindexVO = new EindexVO();
+        }
+        return resultEindexVO;
+    }
 
-	private MedicalCodeVO getDrugNeoplasmHierarchy(Map<String, Object> m,String type) {		
-		MedicalCodeVO resultMedicalCode = null;
-		List<Map<String,Object>> resultMap = new ArrayList<>();
-		if (type == "neoplasm") {
-			resultMap = neoPlasmRepository.getParentChildList(Integer.valueOf(String.valueOf(m.get("id"))));
-		} else if (type == "drug") {
-			resultMap = drugRepository.getParentChildList(Integer.valueOf(String.valueOf(m.get("id"))));
-		}
-		for(int x = 0; x < resultMap.size(); x++) {
-			if(resultMedicalCode == null) {
-				resultMedicalCode = populateMedicalCode(m);
-			} else {
-				MedicalCodeVO medicalCode = populateMedicalCode(resultMap.get(x));
-				medicalCode.setChild(resultMedicalCode);
-				resultMedicalCode = medicalCode;
-			}
-		}
-		if(resultMedicalCode == null) {
-			resultMedicalCode = new MedicalCodeVO();
-		}
-		
-		return resultMedicalCode;
-	}
+    private EindexVO populateEindexVO(Map<String, Object> map) {
+        EindexVO eindexVo = new EindexVO();
+        eindexVo.setId(Integer.parseInt(map.get("id").toString()));
+        eindexVo.setTitle(String.valueOf(map.get("title")));
+        eindexVo.setSee(String.valueOf(map.get("see")));
+        eindexVo.setSeealso(String.valueOf(map.get("seealso")));
+        eindexVo.setIsmainterm(Boolean.valueOf(map.get("ismainterm").toString()));
+        eindexVo.setCode(String.valueOf(map.get("code")));
+        eindexVo.setNemod(String.valueOf(map.get("nemod")));
+        return eindexVo;
+    }
 
-	private EindexVO getParentChildHierarchy(Eindex eindex) {
-		EindexVO resultEindexVO = null;
-		List<Map<String,Object>> resultMap = eindexRepository.getParentChildList(eindex.getId());
-		for(int x = 0; x < resultMap.size(); x++) {
-			if(resultEindexVO == null) {
-				resultEindexVO = populateEindexVO(resultMap.get(x));
-			} else {
-				EindexVO eindexVO = populateEindexVO(resultMap.get(x));
-				eindexVO.setChild(resultEindexVO);
-				resultEindexVO = eindexVO;
-			}
-		}
-		if(resultEindexVO == null) {
-			resultEindexVO = new EindexVO();
-		}
-		return resultEindexVO;
-	}
+    private EindexVO populateEindexVO(Map<String, Object> map, String code) {
+        EindexVO eindexVo = populateEindexVO(map);
+        if (code != null) {
+            eindexVo.setCode(code);
+        }
+        return eindexVo;
+    }
 
-	private EindexVO populateEindexVO(Map<String,Object> map) {
-		EindexVO eindexVo = new EindexVO();
-		eindexVo.setId(Integer.parseInt(map.get("id").toString()));
-		eindexVo.setTitle(String.valueOf(map.get("title")));
-		eindexVo.setSee(String.valueOf(map.get("see")));
-		eindexVo.setSeealso(String.valueOf(map.get("seealso")));
-		eindexVo.setIsmainterm(Boolean.valueOf(map.get("ismainterm").toString()));
-		eindexVo.setCode(String.valueOf(map.get("code")));
-		eindexVo.setNemod(String.valueOf(map.get("nemod")));
-		return eindexVo;
-	}
-	
-	private EindexVO populateEindexVO(Map<String,Object> map,String code) {
-		EindexVO eindexVo = populateEindexVO(map);
-		if(code!=null) {
-			eindexVo.setCode(code);
-		}
-		return eindexVo;
-	}
-
-	private MedicalCodeVO populateMedicalCode(Map<String, Object> m) {
-		MedicalCodeVO medicalCode = new MedicalCodeVO();
-		medicalCode.setId(Integer.valueOf(String.valueOf(m.get("id"))));
-		medicalCode.setTitle(String.valueOf(m.get("title")));
-		medicalCode.setSee(String.valueOf(m.get("see")));
-		medicalCode.setSeealso(String.valueOf(m.get("seealso")));
-		medicalCode.setIsmainterm(Boolean.valueOf(String.valueOf(m.get("ismainterm"))));
-		medicalCode.setNemod(String.valueOf(m.get("nemod")));
-		medicalCode.setCode(Arrays.asList(String.valueOf(m.get("code")).split(",")));
-		return medicalCode;
-	}
+    private MedicalCodeVO populateMedicalCode(Map<String, Object> m) {
+        MedicalCodeVO medicalCode = new MedicalCodeVO();
+        medicalCode.setId(Integer.valueOf(String.valueOf(m.get("id"))));
+        medicalCode.setTitle(String.valueOf(m.get("title")));
+        medicalCode.setSee(String.valueOf(m.get("see")));
+        medicalCode.setSeealso(String.valueOf(m.get("seealso")));
+        medicalCode.setIsmainterm(Boolean.valueOf(String.valueOf(m.get("ismainterm"))));
+        medicalCode.setNemod(String.valueOf(m.get("nemod")));
+        medicalCode.setCode(Arrays.asList(String.valueOf(m.get("code")).split(",")));
+        return medicalCode;
+    }
 }

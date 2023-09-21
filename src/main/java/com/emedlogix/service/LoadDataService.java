@@ -1,11 +1,5 @@
 package com.emedlogix.service;
 
-import static com.emedlogix.util.Constants.DRUG;
-import static com.emedlogix.util.Constants.NEOPLASM;
-import static com.emedlogix.util.Constants.INDEX;
-import static com.emedlogix.util.Constants.TABULAR;
-import static com.emedlogix.util.Constants.ORDER;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,6 +9,8 @@ import org.springframework.stereotype.Service;
 import com.emedlogix.controller.LoadDataController;
 import com.emedlogix.entity.FileStatus;
 import com.emedlogix.repository.FileStatusReposistory;
+
+import static com.emedlogix.util.Constants.*;
 
 @Service
 public class LoadDataService implements LoadDataController {
@@ -53,6 +49,9 @@ public class LoadDataService implements LoadDataController {
 		}
 		if(fileType.equalsIgnoreCase(ORDER)) {
 			extractorService.loadOrderedCodesData(year,fileName);
+		}
+		if (fileType.equalsIgnoreCase(ALTERNATE_TERMS)){
+			extractorService.loadAlternateTermsData(year,fileName);
 		}
 	}
 
