@@ -38,7 +38,7 @@ import jakarta.xml.bind.annotation.XmlType;
 @XmlType(name = "noteType", propOrder = {
     "note"
 })
-public class NoteType {
+public class NoteType extends ContentType{
 
     protected List<ContentType> note;
 

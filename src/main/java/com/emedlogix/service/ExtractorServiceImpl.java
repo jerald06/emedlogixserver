@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.emedlogix.codes.*;
 import com.emedlogix.entity.*;
 import com.emedlogix.repository.*;
 import org.apache.poi.ss.usermodel.*;
@@ -32,14 +33,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
-import com.emedlogix.codes.ChapterType;
-import com.emedlogix.codes.ContentType;
-import com.emedlogix.codes.DiagnosisType;
-import com.emedlogix.codes.ICD10CMTabular;
-import com.emedlogix.codes.NoteType;
-import com.emedlogix.codes.SectionIndexType;
-import com.emedlogix.codes.SectionType;
-import com.emedlogix.codes.VisualImpairmentType;
 import com.emedlogix.index.ICD10CMIndex;
 import com.emedlogix.index.MainTerm;
 import com.emedlogix.index.Term;
@@ -131,11 +124,50 @@ public class ExtractorServiceImpl implements ExtractorService {
                     String json = ow.writeValueAsString(visualImpairment);
                     logger.info("JSON : {}", json);
                     sections.get(sections.size() - 1).setVisImpair(json);
+                }if (inclusionTermOrSevenChrNoteOrSevenChrDef.get(i).getDeclaredType() == SevenChrDefType.class) {
+                    SevenChrDefType sevenChrDefType = (SevenChrDefType) inclusionTermOrSevenChrNoteOrSevenChrDef.get(i).getValue();
+                    SevenChrDef sevenChrDef = parseSevenChrDefType(sevenChrDefType);
+                    ObjectWriter ow = new ObjectMapper().writer();
+                    String json = ow.writeValueAsString(sevenChrDef);
+                    logger.info("JSON : {}",json);
+                    sections.get(sections.size() - 1).setSevenChr(json);
+
                 }
             }
         }
         return sections;
     }
+
+    private SevenChrDef parseSevenChrDefType(SevenChrDefType sevenChrDefType) {
+        SevenChrDef sevenChrDef = new SevenChrDef();
+        List<Extension> extensionList = new ArrayList<>();
+        String noteValue=null;
+        for (ContentType contentType : sevenChrDefType.getExtensionOrNote()) {
+            if (contentType instanceof ExtensionType) {
+                // Handle ExtensionType
+                ExtensionType extensionType = (ExtensionType) contentType;
+                String extensionValue = extensionType.getContent().get(0).toString();
+                String charValue = extensionType.getChar();
+                Extension extension = new Extension();
+                extension.setExtensionValue(extensionValue);
+                extension.setCharValue(charValue);
+                extensionList.add(extension);
+            } else if (contentType instanceof NoteType) {
+                NoteType noteType = (NoteType) contentType;
+                List<ContentType> noteContents = noteType.getNote();
+                if (!noteContents.isEmpty()){
+                    noteValue = noteContents.get(0).getContent().get(0).toString();
+                }
+            }
+        }
+
+        // Set the extensionList in the SevenChrDef object
+        sevenChrDef.setExtensionList(extensionList);
+        sevenChrDef.setNote(noteValue);
+
+        return sevenChrDef;
+    }
+
 
     private void populateVisRange(VisualImpairment visualImpairment, Category category, VisualImpairmentType.VisCategory.VisRange visRange) {
         if (visRange.getHeading() != null)

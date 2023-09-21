@@ -21,7 +21,7 @@ public class Section {
     String chapterId;
     String icdReference;
     String version;
-    @OneToMany(mappedBy="section")
+    @OneToMany(mappedBy = "section")
     @Cascade(org.hibernate.annotations.CascadeType.ALL)
     List<Notes> notes;
 
@@ -31,6 +31,15 @@ public class Section {
 
     @JsonIgnore
     String visImpair;
+
+    @Transient
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    SevenChrDef sevenChrDef;
+
+
+    @JsonIgnore
+    String sevenChr;
+
 
     public String getCode() {
         return code;
@@ -65,7 +74,7 @@ public class Section {
     }
 
     public List<Notes> getNotes() {
-        notes = notes==null?new ArrayList<>():notes;
+        notes = notes == null ? new ArrayList<>() : notes;
         return notes;
     }
 
@@ -74,7 +83,7 @@ public class Section {
     }
 
     public VisualImpairment getVisualImpairment() throws JsonProcessingException {
-        visualImpairment = this.visImpair != null ? new ObjectMapper().readValue(this.visImpair, VisualImpairment.class): null;
+        visualImpairment = this.visImpair != null ? new ObjectMapper().readValue(this.visImpair, VisualImpairment.class) : null;
         return visualImpairment;
     }
 
@@ -91,6 +100,23 @@ public class Section {
         this.visImpair = visImpair;
     }
 
+    public SevenChrDef getSevenChrDef() throws JsonProcessingException{
+        sevenChrDef = this.sevenChr != null ? new ObjectMapper().readValue(this.sevenChr,SevenChrDef.class):null;
+        return sevenChrDef;
+    }
+
+    public void setSevenChrDef(SevenChrDef sevenChrDef) {
+        this.sevenChrDef = sevenChrDef;
+    }
+
+    public String getSevenChr() {
+        return sevenChr;
+    }
+
+    public void setSevenChr(String sevenChr) {
+        this.sevenChr = sevenChr;
+    }
+
     @Override
     public String toString() {
         return "Section{" +
@@ -99,7 +125,8 @@ public class Section {
                 ", icdReference='" + icdReference + '\'' +
                 ", version='" + version + '\'' +
                 ", notes=" + notes +
-                ", visualImpairment=" + visualImpairment + '\'' +
+                ", visualImpairment=" + visualImpairment +
+                ", sevenChrDef=" + sevenChrDef +
                 '}';
     }
 }
