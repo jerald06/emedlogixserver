@@ -230,7 +230,6 @@ public class CodeSearchService implements CodeSearchController {
             mainTermResult.forEach(e -> {
                 getMainTermSeeAndSeealso(e, mainTermSeeSeeAlso);
             });
-            //mainTerm mainTerm(See/See Also term of main term has 2nd main term)
             if (mainTermSeeSeeAlso.contains(names[1])) {
                 return mainTermResult.stream().map(i -> {
                     return extractEintexVO(i);
@@ -393,6 +392,7 @@ public class CodeSearchService implements CodeSearchController {
         eindexVo.setIsmainterm(Boolean.valueOf(map.get("ismainterm").toString()));
         eindexVo.setCode(String.valueOf(map.get("code")));
         eindexVo.setNemod(String.valueOf(map.get("nemod")));
+        eindexVo.calculateType();
         return eindexVo;
     }
 

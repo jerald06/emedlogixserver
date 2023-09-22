@@ -22,6 +22,17 @@ public class CodeInfo {
     @Field(type = FieldType.Text, name = "description")
     private String description;
 
+    private String type;
+
+    public String getType() {
+        if (code != null && description != null) {
+            type = "code";
+        } else {
+            type = null;
+        }
+        return type;
+    }
+
     public String getId() {
         return id;
     }

@@ -53,8 +53,6 @@ public interface CodeSearchController {
     @GetMapping("/alldetails/neoplasm")
     List<MedicalCodeVO> getNeoplasmDetails(@RequestParam(value = "title", required = false) String title);
 
-
-
     @GetMapping("/filterby/neoplasm")
     List<MedicalCodeVO> filterNeoplasmDetails(@RequestParam("filterBy") String filterBy);
 

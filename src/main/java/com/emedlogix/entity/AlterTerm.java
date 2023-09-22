@@ -19,6 +19,17 @@ public class AlterTerm {
     @Field(type = FieldType.Text, name = "alterDescription")
     private String alterDescription;
 
+    private String type;
+
+    public String getType() {
+        if (code != null && alterDescription != null) {
+            type = "alterTerm";
+        } else {
+            type = null;
+        }
+        return type;
+    }
+
     public String getId() {
         return id;
     }

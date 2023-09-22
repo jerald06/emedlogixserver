@@ -15,4 +15,27 @@ public class EindexVO {
     private Boolean ismainterm;
     private String nemod;
     private EindexVO child;
+    private String type;
+
+    public void calculateType() {
+        if (ismainterm) {
+            if (code == null && see != null && (seealso == null || seealso.equalsIgnoreCase("null"))) {
+                type = "see";
+            } else if (code == null && see == null && seealso != null) {
+                type = "seealso";
+            } else {
+                type = "ismainterm";
+            }
+        } else {
+            if (code == null || code.equalsIgnoreCase("null")) {
+                if (see != null && (seealso == null || seealso.equalsIgnoreCase("null"))) {
+                    type = "see";
+                } else if (see != null && seealso != null) {
+                    type = "seealso";
+                }
+            } else {
+                type = "code";
+            }
+        }
+    }
 }
