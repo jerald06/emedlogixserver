@@ -230,6 +230,7 @@ public class CodeSearchService implements CodeSearchController {
             mainTermResult.forEach(e -> {
                 getMainTermSeeAndSeealso(e, mainTermSeeSeeAlso);
             });
+            //mainTerm mainTerm(See/See Also term of main term has 2nd main term)
             if (mainTermSeeSeeAlso.contains(names[1])) {
                 return mainTermResult.stream().map(i -> {
                     return extractEintexVO(i);
