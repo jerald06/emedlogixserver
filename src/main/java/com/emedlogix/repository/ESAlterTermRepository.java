@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @Repository
 public interface ESAlterTermRepository extends ElasticsearchRepository<AlterTerm, String> {
-    @Query("{\"query_string\" : {\"query\" : \"?0~\"}}")
+    @Query("{\"bool\": {\"must\": [{\"match\": {\"alterDescription\": {\"query\": \"?0\", \"fuzziness\": \"AUTO\"}}}]}}")
     List<AlterTerm> findByAlterDescription(String query);
 
     Optional<AlterTerm> findByCode(String code);

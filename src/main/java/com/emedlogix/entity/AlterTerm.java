@@ -6,6 +6,7 @@ import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import javax.persistence.Column;
+
 @Document(indexName = "alterterm")
 public class AlterTerm {
     @Id
