@@ -70,4 +70,9 @@ public interface CodeSearchController {
     @GetMapping("/alter-terms/search")
     List<AlterTerm> searchByAlterDescription(@RequestParam String alterDescription);
 
+
+    @GetMapping("/index/search/term")
+    List<EindexVO> getEIndexByTermSearch(@RequestParam(required = true, value = "name") String name,
+                                         @RequestParam(required = false, value = "mainTermSearch", defaultValue = "true") boolean mainTermSearch);
+
 }

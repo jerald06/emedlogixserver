@@ -219,6 +219,81 @@ public class CodeSearchService implements CodeSearchController {
         return esAlterTermRepository.findByAlterDescription(alterDescription);
     }
 
+
+    @Override
+    public List<EindexVO> getEIndexByTermSearch(String name, boolean mainTermSearch) {
+        String[] names = name.trim().split(" ");
+        List<EindexVO> result = new ArrayList<>();
+        if (names.length == 1) {
+            result = singleTermSearch(names[0]);
+        } else if (names.length == 2) {
+            result = multipleSearch(names, mainTermSearch);
+        }
+        return result;
+    }
+    private List<EindexVO> singleTermSearch(String name) {
+        List<EindexVO> result = new ArrayList<>();
+        // Search for the given term
+        List<Eindex> termResults = eindexRepository.findMainTerm(name);
+        for (Eindex termResult : termResults) {
+            EindexVO termVO = extractEindexVO(termResult);
+            // Check if the term has no code but has see or seealso
+            if (termVO.getCode() == null && (termVO.getSee() != null || termVO.getSeealso() != null)) {
+                List<EindexVO> associatedCodes = findCodesForAssociatedTerms(termVO);
+                if (!associatedCodes.isEmpty()) {
+                    termVO.setCode(associatedCodes.get(0).getDerivedCode()); // Pass the derivedCode to code
+                }
+            }
+            result.add(termVO); // Add the term to the result
+        }
+        return result;
+    }
+
+    private EindexVO extractEindexVO(Eindex i) {
+        EindexVO eindexVO = new EindexVO();
+        eindexVO.setId(i.getId());
+        eindexVO.setTitle(i.getTitle());
+        eindexVO.setCode(i.getCode());
+        eindexVO.setSee(i.getSee());
+        eindexVO.setSeealso(i.getSeealso());
+        eindexVO.setIsmainterm(i.getIsmainterm());
+        eindexVO.setNemod(i.getNemod());
+
+        // Check if ismainterm, code is null, and see or seealso is not null
+        if (eindexVO.getIsmainterm() && eindexVO.getCode() == null && (eindexVO.getSee() != null || eindexVO.getSeealso() != null)) {
+            eindexVO.setDerivedCode("your_derived_code_value"); // Set the derived code value
+        }
+
+        return eindexVO;
+    }
+
+    private List<EindexVO> findCodesForAssociatedTerms(EindexVO termVO) {
+        List<EindexVO> result = new ArrayList<>();
+        // Check if there is a "see" term
+        if (termVO.getSee() != null) {
+            List<Eindex> seeTerms = eindexRepository.findMainTerm(termVO.getSee());
+            for (Eindex seeTerm : seeTerms) {
+                if (seeTerm.getIsmainterm() && seeTerm.getCode() != null) {
+                    termVO.setDerivedCode(seeTerm.getCode());
+                    result.add(termVO);
+                }
+            }
+        }
+        // Check if there is a "seealso" term
+        if (termVO.getSeealso() != null) {
+            List<Eindex> seeAlsoTerms = eindexRepository.findMainTerm(termVO.getSeealso());
+            for (Eindex seeAlsoTerm : seeAlsoTerms) {
+                if (seeAlsoTerm.getIsmainterm() && seeAlsoTerm.getCode() != null) {
+                    termVO.setDerivedCode(seeAlsoTerm.getCode());
+                    result.add(termVO);
+                }
+            }
+        }
+        return result;
+    }
+
+
+
     private List<EindexVO> multipleSearch(String[] names, boolean mainTermSearch) {
         List<EindexVO> result = new ArrayList<>();
         if (mainTermSearch) {
@@ -416,4 +491,6 @@ public class CodeSearchService implements CodeSearchController {
         medicalCode.setCode(Arrays.asList(String.valueOf(m.get("code")).split(",")));
         return medicalCode;
     }
+
+
 }

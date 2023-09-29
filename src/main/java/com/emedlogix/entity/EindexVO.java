@@ -15,6 +15,7 @@ public class EindexVO {
     private Boolean ismainterm;
     private String nemod;
     private EindexVO child;
+    private String derivedCode;
     private String type;
 
     public void calculateType() {
