@@ -18,15 +18,15 @@ public class EindexVO {
     private String derivedCode;
     private String type;
 
+
+
     public void calculateType() {
-        if (ismainterm) {
-            if (code == null && see != null && (seealso == null || seealso.equalsIgnoreCase("null"))) {
-                type = "see";
-            } else if (code == null && see == null && seealso != null) {
-                type = "seealso";
-            } else {
+        if (ismainterm && code != null && !code.equalsIgnoreCase("null") && derivedCode != null) {
+            if (see != null || (seealso != null && !seealso.equalsIgnoreCase("null"))) {
                 type = "ismainterm";
             }
+        } else if (ismainterm) {
+            type = "ismainterm";
         } else {
             if (code == null || code.equalsIgnoreCase("null")) {
                 if (see != null && (seealso == null || seealso.equalsIgnoreCase("null"))) {

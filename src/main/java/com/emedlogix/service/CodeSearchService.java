@@ -258,12 +258,12 @@ public class CodeSearchService implements CodeSearchController {
         eindexVO.setSeealso(i.getSeealso());
         eindexVO.setIsmainterm(i.getIsmainterm());
         eindexVO.setNemod(i.getNemod());
+        eindexVO.calculateType();
 
         // Check if ismainterm, code is null, and see or seealso is not null
         if (eindexVO.getIsmainterm() && eindexVO.getCode() == null && (eindexVO.getSee() != null || eindexVO.getSeealso() != null)) {
             eindexVO.setDerivedCode("your_derived_code_value"); // Set the derived code value
         }
-
         return eindexVO;
     }
 
