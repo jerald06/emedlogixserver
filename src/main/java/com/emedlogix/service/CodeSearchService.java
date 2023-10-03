@@ -91,6 +91,12 @@ public class CodeSearchService implements CodeSearchController {
             codeInfoList.add(codeInfo);
         }
         logger.info("Got matching codes size:", codeInfoList.size());
+        Collections.sort(codeInfoList, new Comparator<CodeInfo>() {
+            @Override
+            public int compare(CodeInfo codeInfo1, CodeInfo codeInfo2) {
+                return codeInfo1.getCode().compareTo(codeInfo2.getCode());
+            }
+        });
         return codeInfoList;
     }
 
@@ -104,6 +110,12 @@ public class CodeSearchService implements CodeSearchController {
             codeInfoList.addAll(wordMatches);
         }
         logger.info("Got matching description :", codeInfoList.size());
+        Collections.sort(codeInfoList, new Comparator<CodeInfo>() {
+            @Override
+            public int compare(CodeInfo codeInfo1, CodeInfo codeInfo2) {
+                return codeInfo1.getCode().compareTo(codeInfo2.getCode());
+            }
+        });
         return codeInfoList;
     }
 
@@ -231,6 +243,7 @@ public class CodeSearchService implements CodeSearchController {
         }
         return result;
     }
+
     private List<EindexVO> singleTermSearch(String name) {
         List<EindexVO> result = new ArrayList<>();
         // Search for the given term
@@ -262,7 +275,10 @@ public class CodeSearchService implements CodeSearchController {
 
         // Check if ismainterm, code is null, and see or seealso is not null
         if (eindexVO.getIsmainterm() && eindexVO.getCode() == null && (eindexVO.getSee() != null || eindexVO.getSeealso() != null)) {
-            eindexVO.setDerivedCode("your_derived_code_value"); // Set the derived code value
+            List<String> associatedCodes = findAssociatedCodes(eindexVO);
+            if (!associatedCodes.isEmpty()) {
+                eindexVO.setDerivedCode(associatedCodes.get(0)); // Set the derived code value
+            }
         }
         return eindexVO;
     }
@@ -292,6 +308,35 @@ public class CodeSearchService implements CodeSearchController {
         return result;
     }
 
+    private List<String> findAssociatedCodes(EindexVO termVO) {
+        List<String> associatedCodes = new ArrayList<>();
+
+        if (termVO.getSee() != null) {
+            String[] seeTerms = termVO.getSee().split(",");
+            for (String seeTerm : seeTerms) {
+                List<Eindex> codeResults = eindexRepository.findMainTerm(seeTerm.trim());
+                for (Eindex codeResult : codeResults) {
+                    if (codeResult.getIsmainterm() && codeResult.getCode() != null) {
+                        associatedCodes.add(codeResult.getCode());
+                    }
+                }
+            }
+        }
+
+        if (termVO.getSeealso() != null) {
+            String[] seeAlsoTerms = termVO.getSeealso().split(",");
+            for (String seeAlsoTerm : seeAlsoTerms) {
+                List<Eindex> codeResults = eindexRepository.findMainTerm(seeAlsoTerm.trim());
+                for (Eindex codeResult : codeResults) {
+                    if (codeResult.getIsmainterm() && codeResult.getCode() != null) {
+                        associatedCodes.add(codeResult.getCode());
+                    }
+                }
+            }
+        }
+
+        return associatedCodes;
+    }
 
 
     private List<EindexVO> multipleSearch(String[] names, boolean mainTermSearch) {

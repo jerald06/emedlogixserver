@@ -18,8 +18,6 @@ public class EindexVO {
     private String derivedCode;
     private String type;
 
-
-
     public void calculateType() {
         if (ismainterm && code != null && !code.equalsIgnoreCase("null") && derivedCode != null) {
             if (see != null || (seealso != null && !seealso.equalsIgnoreCase("null"))) {
