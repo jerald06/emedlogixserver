@@ -350,6 +350,15 @@ public class CodeSearchService implements CodeSearchController {
             mainTermResult.forEach(e -> {
                 getMainTermSeeAndSeealso(e, mainTermSeeSeeAlso);
             });
+            for (String searchTerm : names) {
+                List<EindexVO> searchResult;
+                if (mainTermSearch) {
+                    searchResult = singleMainTermSearch(searchTerm);
+                } else {
+                    searchResult = singleLevelTermSearch(searchTerm);
+                }
+                result.addAll(searchResult);
+            }
             //mainTerm mainTerm(See/See Also term of main term has 2nd main term)
             if (mainTermSeeSeeAlso.contains(names[1])) {
                 return mainTermResult.stream().map(i -> {
