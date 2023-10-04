@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@Entity(name = "eindex")
+@Entity
 @Table(name="eindex")
 public class Eindex {
 

@@ -119,22 +119,29 @@ public class CodeSearchService implements CodeSearchController {
         return codeInfoList;
     }
 
+    @Override
     public CodeDetails getCodeInfoDetails(@PathVariable String code, @RequestParam String version) {
-        logger.info("Getting Code Information Details for code:", code);
+        logger.info("Getting Code Information Details for code: {}", code);
         CodeDetails codeDetails = dbCodeDetailsRepository.findByCode(code);
-        Section section = sectionRepository.findByCodeAndVersion(code, version);
+        Section section = sectionRepository.findByCodeAndVersion(code, version); // Filter by version
         if (section != null) {
             codeDetails.setSection(section);
             chapterRepository.findById(section.getChapterId()).ifPresent(value -> {
-                codeDetails.setChapter(value);
+                // Filter the chapter's notes by version as well
+                Chapter chapter = value;
+                chapter.setNotes(chapter.getNotes()
+                        .stream()
+                        .filter(note -> version.equals(note.getVersion()))
+                        .collect(Collectors.toList()));
+                codeDetails.setChapter(chapter);
             });
         }
         return codeDetails;
     }
 
     @Override
-    public List<EindexVO> getEIndex(String code) {
-        return eindexRepository.findMainTermBySearch(code).stream().map(m -> {
+    public List<EindexVO> getEIndex(String code,String version) {
+        return eindexRepository.findMainTermBySearch(code,version).stream().map(m -> {
             return getParentChildHierarchy(m);
         }).collect(Collectors.toList());
     }

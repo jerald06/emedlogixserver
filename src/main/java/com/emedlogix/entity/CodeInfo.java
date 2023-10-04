@@ -21,7 +21,8 @@ public class CodeInfo {
     private String code;
     @Field(type = FieldType.Text, name = "description")
     private String description;
-
+    @Field(type = FieldType.Text,name = "version")
+    private String version;
     private String type;
 
     public String getType() {
@@ -56,6 +57,14 @@ public class CodeInfo {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 }
 

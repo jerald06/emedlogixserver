@@ -36,7 +36,7 @@ public interface CodeSearchController {
     CodeDetails getCodeInfoDetails(@PathVariable String code, @RequestParam("version") String version);
 
     @GetMapping("/{code}/index")
-    List<EindexVO> getEIndex(@PathVariable String code);
+    List<EindexVO> getEIndex(@PathVariable String code,@RequestParam("version") String version);
 
     @GetMapping("/alldetails/index")
     List<Eindex> getIndexDetails();

@@ -20,7 +20,7 @@ public class CodeDetails{
     private String code;
 
     private String shortDescription;
-
+    private String version;
     @Transient
     private Chapter chapter;
     @Transient
@@ -83,6 +83,14 @@ public class CodeDetails{
         this.section = section;
     }
 
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
     @Override
     public String toString() {
         return "CodeDetails{" +
@@ -91,6 +99,7 @@ public class CodeDetails{
                 ", id='" + id + '\'' +
                 ", code='" + code + '\'' +
                 ", shortDescription='" + shortDescription + '\'' +
+                ", version='" + version + '\'' +
                 ", chapter=" + chapter +
                 ", section=" + section +
                 '}';

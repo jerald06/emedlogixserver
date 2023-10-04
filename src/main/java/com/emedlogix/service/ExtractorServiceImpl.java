@@ -13,15 +13,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import com.emedlogix.codes.*;
 import com.emedlogix.entity.*;
@@ -334,10 +326,12 @@ public class ExtractorServiceImpl implements ExtractorService {
             while ((line = reader.readLine()) != null) {
                 if (line.trim().length() > 0) {
                     CodeDetails details = parseCodeDetails(line);
+                    details.setVersion(year.toString());
                     codeDetailsMap.put(details.getCode(), details);
                     CodeInfo codeInfo = new CodeInfo();
                     codeInfo.setCode(details.getCode());
                     codeInfo.setDescription(details.getLongDescription());
+                    codeInfo.setVersion(String.valueOf(year));
                     codeMap.put(codeInfo.getCode(), codeInfo);
                 }
             }
@@ -422,10 +416,48 @@ public class ExtractorServiceImpl implements ExtractorService {
     private void doSaveCodesToES(Map<String, CodeInfo> codeMap) {
         if (codeMap != null && !codeMap.isEmpty()) {
             logger.info("Total codes extracted {}", codeMap.entrySet().size());
-            esCodeInfoRepository.saveAll(codeMap.values());
+
+            // Retrieve existing data from Elasticsearch
+            Iterable<CodeInfo> existingCodeInfoList = esCodeInfoRepository.findAll();
+
+            // Create a map to store existing code entries for quick lookup
+            Map<String, CodeInfo> existingCodeMap = new HashMap<>();
+            for (CodeInfo existingCodeInfo : existingCodeInfoList) {
+                existingCodeMap.put(existingCodeInfo.getCode(), existingCodeInfo);
+            }
+
+            // Create a list to store the merged code entries (new + existing)
+            List<CodeInfo> mergedCodeInfoList = new ArrayList<>();
+
+            // Iterate through the codeMap and merge new data with existing data
+            for (CodeInfo newCodeInfo : codeMap.values()) {
+                String code = newCodeInfo.getCode();
+
+                // Check if the code already exists in the existing data
+                if (!existingCodeMap.containsKey(code)) {
+                    // Code is not in the existing data, add it to the merged list
+                    mergedCodeInfoList.add(newCodeInfo);
+                } else {
+                    // Code already exists, generate a new unique ID and add it
+                    CodeInfo existingCode = existingCodeMap.get(code);
+                    // Generate a new unique ID using UUID
+                    String newUniqueId = UUID.randomUUID().toString();
+                    newCodeInfo.setId(newUniqueId);
+                    // Add the updated code to the merged list
+                    mergedCodeInfoList.add(newCodeInfo);
+                }
+            }
+
+            // Save the merged code info entries to Elasticsearch
+            if (!mergedCodeInfoList.isEmpty()) {
+                logger.info("Saving {} codes (including duplicates with new IDs) to Elasticsearch.", mergedCodeInfoList.size());
+                esCodeInfoRepository.saveAll(mergedCodeInfoList);
+            }
         }
         logger.info("Extractor Service Codes completed...");
     }
+
+
 
     private void doSaveOrderedCodesToDB(Map<String, CodeDetails> codeDetailsMap) {
         if (codeDetailsMap != null && !codeDetailsMap.isEmpty()) {
