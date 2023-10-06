@@ -27,10 +27,10 @@ public interface CodeSearchController {
     CodeInfo getCodeInfo(@PathVariable String code) throws IOException;
 
     @GetMapping("/{code}/matches")
-    List<CodeInfo> getCodeInfoMatches(@PathVariable String code);
+    List<CodeInfo> getCodeInfoMatches(@PathVariable String code,@RequestParam("version") String version);
 
     @GetMapping("/{description}/description")
-    List<CodeInfo> getCodeInfoDescription(@PathVariable String description);
+    List<CodeInfo> getCodeInfoDescription(@PathVariable String description,@RequestParam("version") String version);
 
     @GetMapping("/{code}/details")
     CodeDetails getCodeInfoDetails(@PathVariable String code, @RequestParam("version") String version);
@@ -45,33 +45,36 @@ public interface CodeSearchController {
     List<CodeInfo> getDescriptionDetails(@RequestParam("keywords") String sortBy);
 
     @GetMapping("/alldetails/index/title")
-    List<Eindex> getIndexDetailsByTitleStartingWith(@RequestParam String filterBy);
+    List<Eindex> getIndexDetailsByTitleStartingWith(@RequestParam String filterBy,@RequestParam String version);
 
     @GetMapping("/{code}/neoplasm")
-    List<MedicalCodeVO> getNeoPlasm(@PathVariable String code);
+    List<MedicalCodeVO> getNeoPlasm(@PathVariable String code,@RequestParam("version") String version);
 
     @GetMapping("/alldetails/neoplasm")
-    List<MedicalCodeVO> getNeoplasmDetails(@RequestParam(value = "title", required = false) String title);
+    List<MedicalCodeVO> getNeoplasmDetails(@RequestParam(value = "title", required = false) String title,
+                                           @RequestParam(value = "version",required = false) String version);
 
     @GetMapping("/filterby/neoplasm")
     List<MedicalCodeVO> filterNeoplasmDetails(@RequestParam("filterBy") String filterBy);
 
     @GetMapping("/{code}/drug")
-	List<MedicalCodeVO> getDrug(@PathVariable String code);
+	List<MedicalCodeVO> getDrug(@PathVariable String code,@RequestParam("version")String version);
 
     @GetMapping("/alldetails/drug")
-    List<MedicalCodeVO> getDrugDetails(@RequestParam(value = "title", required = false) String title);
+    List<MedicalCodeVO> getDrugDetails(@RequestParam(value = "title", required = false) String title,@RequestParam("version")String version);
 
 
     @GetMapping("/index/search/name")
     List<EindexVO> getEIndexByNameSearch(@RequestParam(required = true,value = "name") String name,
-                                         @RequestParam(required = false,value = "mainTermSearch",defaultValue = "true") boolean mainTermSearch);
+                                         @RequestParam(required = false,value = "mainTermSearch",defaultValue = "true") boolean mainTermSearch,
+                                         @RequestParam("version") String version);
 
     @GetMapping("/alter-terms/search")
-    List<AlterTerm> searchByAlterDescription(@RequestParam String alterDescription);
+    List<AlterTerm> searchByAlterDescription(@RequestParam String alterDescription,@RequestParam("version") String version);
 
     @GetMapping("/index/search/term")
     List<EindexVO> getEIndexByTermSearch(@RequestParam(required = true, value = "name") String name,
-                                         @RequestParam(required = false, value = "mainTermSearch", defaultValue = "true") boolean mainTermSearch);
+                                         @RequestParam(required = false, value = "mainTermSearch", defaultValue = "true") boolean mainTermSearch,
+                                         @RequestParam("version") String version);
 
 }

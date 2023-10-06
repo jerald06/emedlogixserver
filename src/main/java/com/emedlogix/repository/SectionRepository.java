@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SectionRepository extends JpaRepository<Section, String> {
-    Section findByCodeAndVersion(String code,String version);
+    Section findFirstByCodeAndVersion(String code,String version);
 }

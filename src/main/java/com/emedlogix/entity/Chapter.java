@@ -9,24 +9,23 @@ import java.util.List;
 
 @Entity(name = "emed_chapter")
 public class Chapter {
-
     @Id
-    @Column(nullable = false)
-    String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    Long id;
     String icdReference;
     String description;
-
+    String name;
     @OneToMany(mappedBy="chapter")
     @Cascade(org.hibernate.annotations.CascadeType.ALL)
     List<Notes> notes;
     String version;
 
-    public String getId() {
-        return id;
+    public String getName() {
+        return name;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getIcdReference() {

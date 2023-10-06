@@ -47,7 +47,6 @@ public class CodeInfo {
     }
 
     public void setCode(String code) {
-        this.id = code;
         this.code = code;
     }
 

@@ -7,7 +7,7 @@ import lombok.Setter;
 @Getter
 public class EindexVO {
 
-    private Integer id;    
+    private Integer id;
     private String title;
     private String code;
     private String see;
@@ -15,6 +15,7 @@ public class EindexVO {
     private Boolean ismainterm;
     private String nemod;
     private EindexVO child;
+    private String version;
     private String derivedCode;
     private String type;
 
@@ -37,4 +38,8 @@ public class EindexVO {
             }
         }
     }
+
+
+
+
 }

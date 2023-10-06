@@ -227,9 +227,11 @@ public class ExtractorServiceImpl implements ExtractorService {
                 ChapterType chapterType = tabIter.next();
                 Chapter chapter = new Chapter();
                 chapter.setIcdReference(icdtitle);
-                chapter.setId(chapterType.getName().getContent().get(0).toString());
+                chapter.setName(chapterType.getName().getContent().get(0).toString());
                 chapter.setDescription(chapterType.getDesc().getContent().get(0).toString());
                 chapter.setVersion(version);
+
+
                 List<SectionReference> sectionReferences = new ArrayList<>();
                 ListIterator<JAXBElement<?>> NodeIter = chapterType.getInclusionTermOrSevenChrNoteOrSevenChrDef().listIterator();
                 while (NodeIter.hasNext()) {
@@ -259,7 +261,7 @@ public class ExtractorServiceImpl implements ExtractorService {
                         if (sectionType.getDeactivatedOrDiag() != null && !sectionType.getDeactivatedOrDiag().isEmpty()) {
                             for (Object diagnosisTypeObj : sectionType.getDeactivatedOrDiag()) {
                                 DiagnosisType diagnosisType = (DiagnosisType) diagnosisTypeObj;
-                                parseSection(diagnosisType, chapter.getVersion(), chapter.getIcdReference(), chapter.getId(), sections);
+                                parseSection(diagnosisType, chapter.getVersion(), chapter.getIcdReference(), chapter.getName(), sections);
                             }
                             //save section;
                             logger.info("Saving Section into DB: size {}", sections.size());
@@ -278,12 +280,13 @@ public class ExtractorServiceImpl implements ExtractorService {
                         sectionReference.setLast(sectionIndexType.getSectionRef().get(0).getLast());
                         sectionReference.setFirst(sectionIndexType.getSectionRef().get(0).getFirst());
                         sectionReference.setVersion(chapter.getVersion());
-                        sectionReference.setChapterId(chapter.getId());
+                        sectionReference.setChapterId(chapter.getName());
                         sectionReferences.add(sectionReference);
+
                     }
                 }
                 //save chapter
-                logger.info("Saving Chanpter :{}", chapter.getId());
+                logger.info("Saving Chanpter :{}", chapter.getName());
                 chapterRepository.save(chapter);
                 fieStatus.setStatus(COMPLETED);
                 fileStatusReposistory.save(fieStatus);
@@ -338,6 +341,7 @@ public class ExtractorServiceImpl implements ExtractorService {
         } catch (IOException e) {
             logger.error(e.toString(), e);
         }
+
         doSaveCodesToES(codeMap);
         doSaveOrderedCodesToDB(codeDetailsMap);
         if (fieStatus != null) {
@@ -381,6 +385,7 @@ public class ExtractorServiceImpl implements ExtractorService {
                             duplicateTerm.setCode(code);
                             duplicateTerm.setAlterDescription(description);
 
+                            duplicateTerm.setVersion(year.toString());
                             // Generate a unique ID for the duplicate record (e.g., using UUID)
                             String uniqueId = UUID.randomUUID().toString();
                             duplicateTerm.setId(uniqueId);
@@ -468,6 +473,7 @@ public class ExtractorServiceImpl implements ExtractorService {
             while (itr.hasNext()) {
                 Map.Entry<String, CodeDetails> entry = itr.next();
                 CodeDetails fetchCodeDetails = entry.getValue();
+                fetchCodeDetails.setId(UUID.randomUUID().toString());
                 dataList.add(fetchCodeDetails);
                 counter++;
                 if (dataList.size() % 2000 == 0) {
@@ -676,6 +682,8 @@ public class ExtractorServiceImpl implements ExtractorService {
                     if (!m.getTerm().isEmpty()) {
                         parseEIndexLevelTerm(m.getTerm(), ids, version);
                     }
+                    EindexVO eindexVO = new EindexVO();
+                    eindexVO.setVersion(year.toString());
                 });
             });
             fieStatus.setStatus(COMPLETED);

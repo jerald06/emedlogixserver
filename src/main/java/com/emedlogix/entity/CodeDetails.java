@@ -20,6 +20,7 @@ public class CodeDetails{
     private String code;
 
     private String shortDescription;
+    @Column(name = "version",nullable = false)
     private String version;
     @Transient
     private Chapter chapter;
@@ -39,7 +40,6 @@ public class CodeDetails{
     }
 
     public void setCode(String code) {
-        this.id = code;
         this.code = code;
     }
 

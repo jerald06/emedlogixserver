@@ -20,6 +20,8 @@ public class AlterTerm {
     @Field(type = FieldType.Text, name = "alterDescription")
     private String alterDescription;
 
+    private String version;
+
     private String type;
 
     public String getType() {
@@ -54,5 +56,13 @@ public class AlterTerm {
 
     public void setAlterDescription(String alterDescription) {
         this.alterDescription = alterDescription;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 }

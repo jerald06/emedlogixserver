@@ -22,16 +22,17 @@ public class CombinedCodeSearchController {
 
     @GetMapping("/index/search/combined")
     public List<EindexVO> getCombinedEIndexSearch(@RequestParam(required = true, value = "name") String name,
-                                                  @RequestParam(required = false, value = "mainTermSearch", defaultValue = "true") boolean mainTermSearch) {
+                                                  @RequestParam(required = false, value = "mainTermSearch", defaultValue = "true") boolean mainTermSearch,
+                                                  @RequestParam("version") String version) {
 
         List<EindexVO> result = new ArrayList<>();
 
         // Call the first API and add its results to the combined result
-        List<EindexVO> resultFromApi1 = codeSearchService.getEIndexByNameSearch(name, mainTermSearch);
+        List<EindexVO> resultFromApi1 = codeSearchService.getEIndexByNameSearch(name, mainTermSearch,version);
         result.addAll(resultFromApi1);
 
         // Call the second API and add its results to the combined result
-        List<EindexVO> resultFromApi2 = codeSearchService.getEIndexByTermSearch(name, mainTermSearch);
+        List<EindexVO> resultFromApi2 = codeSearchService.getEIndexByTermSearch(name, mainTermSearch,version);
         result.addAll(resultFromApi2);
 
         // Deduplicate the results based on the 'id' field

@@ -55,4 +55,6 @@ public class Eindex {
     public String getType() {
         return type;
     }
+
+
 }

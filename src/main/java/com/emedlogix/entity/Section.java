@@ -13,11 +13,13 @@ import java.util.List;
 @Entity(name = "emed_section")
 public class Section {
     @Id
-    @Column(nullable = false)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    Long id;
     String code;
     String chapterId;
     String icdReference;
     String version;
+
     @OneToMany(mappedBy = "section")
     @Cascade(org.hibernate.annotations.CascadeType.ALL)
     List<Notes> notes;
@@ -37,6 +39,13 @@ public class Section {
     @JsonIgnore
     String sevenChr;
 
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getCode() {
         return code;

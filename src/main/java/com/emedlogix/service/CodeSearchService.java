@@ -37,8 +37,6 @@ import com.emedlogix.repository.ESCodeInfoRepository;
 import com.emedlogix.repository.EindexRepository;
 
 import com.emedlogix.repository.SectionRepository;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.bind.annotation.RequestParam;
 
 
@@ -81,10 +79,10 @@ public class CodeSearchService implements CodeSearchController {
         return codeInfo;
     }
 
-    public List<CodeInfo> getCodeInfoMatches(String code) {
+    public List<CodeInfo> getCodeInfoMatches(String code,String version) {
         logger.info("Getting Code Information for code starts with:", code);
         List<CodeInfo> codeInfoList = new ArrayList<>();
-        Iterable<CodeInfo> codeDetailsIterable = esCodeInfoRepository.findByCodeStartingWith(code);
+        Iterable<CodeInfo> codeDetailsIterable = esCodeInfoRepository.findByCodeStartingWithAndVersion(code,version);
         Iterator<CodeInfo> it = codeDetailsIterable.iterator();
         while (it.hasNext()) {
             CodeInfo codeInfo = it.next();
@@ -101,12 +99,12 @@ public class CodeSearchService implements CodeSearchController {
     }
 
     @Override
-    public List<CodeInfo> getCodeInfoDescription(String description) {
+    public List<CodeInfo> getCodeInfoDescription(String description,String version) {
         logger.info("Getting Code Information for Description ", description);
         String[] words = description.split(" \\s+");
         List<CodeInfo> codeInfoList = new ArrayList<>();
         for (String word : words) {
-            List<CodeInfo> wordMatches = esCodeInfoRepository.findByDescriptionFuzzy(word);
+            List<CodeInfo> wordMatches = esCodeInfoRepository.findByDescriptionFuzzyWithVersion(word,version);
             codeInfoList.addAll(wordMatches);
         }
         logger.info("Got matching description :", codeInfoList.size());
@@ -119,22 +117,16 @@ public class CodeSearchService implements CodeSearchController {
         return codeInfoList;
     }
 
-    @Override
     public CodeDetails getCodeInfoDetails(@PathVariable String code, @RequestParam String version) {
-        logger.info("Getting Code Information Details for code: {}", code);
-        CodeDetails codeDetails = dbCodeDetailsRepository.findByCode(code);
-        Section section = sectionRepository.findByCodeAndVersion(code, version); // Filter by version
+        logger.info("Getting Code Information Details for code:", code);
+        CodeDetails codeDetails = dbCodeDetailsRepository.findFirstByCodeAndVersion(code,version);
+        Section section = sectionRepository.findFirstByCodeAndVersion(code, version);
         if (section != null) {
             codeDetails.setSection(section);
-            chapterRepository.findById(section.getChapterId()).ifPresent(value -> {
-                // Filter the chapter's notes by version as well
-                Chapter chapter = value;
-                chapter.setNotes(chapter.getNotes()
-                        .stream()
-                        .filter(note -> version.equals(note.getVersion()))
-                        .collect(Collectors.toList()));
+          Chapter chapter =   chapterRepository.findFirstByNameAndVersion(section.getChapterId(),section.getVersion());
+            if (chapter != null){
                 codeDetails.setChapter(chapter);
-            });
+            }
         }
         return codeDetails;
     }
@@ -165,27 +157,27 @@ public class CodeSearchService implements CodeSearchController {
     }
 
     @Override
-    public List<Eindex> getIndexDetailsByTitleStartingWith(String filterBy) {
-        return eindexRepository.findByTitleStartingWith(filterBy);
+    public List<Eindex> getIndexDetailsByTitleStartingWith(String filterBy,String version) {
+        return eindexRepository.findByTitleStartingWithAndVersion(filterBy,version);
     }
 
 
     @Override
-    public List<MedicalCodeVO> getNeoPlasm(String code) {
-        return neoPlasmRepository.findNeoplasmByCode(code).stream().map(m -> {
+    public List<MedicalCodeVO> getNeoPlasm(String code,String version) {
+        return neoPlasmRepository.findNeoplasmByCodeAndVersion(code,version).stream().map(m -> {
             return getDrugNeoplasmHierarchy(m, "neoplasm");
         }).collect(Collectors.toList());
     }
 
 
     @Override
-    public List<MedicalCodeVO> getNeoplasmDetails(String title) {
+    public List<MedicalCodeVO> getNeoplasmDetails(String title,String version) {
         List<Map<String, Object>> allNeoplasmData;
         if (title != null && !title.isEmpty()) {
             String titlePattern = "^" + title.toLowerCase();
-            allNeoplasmData = neoPlasmRepository.findNeoplasmDataByTitle(titlePattern);
+            allNeoplasmData = neoPlasmRepository.findNeoplasmDataByTitleAndVersion(titlePattern,version);
         } else {
-            allNeoplasmData = neoPlasmRepository.findAllNeoplasmData();
+            allNeoplasmData = neoPlasmRepository.findAllNeoplasmDataByVersion(version);
         }
         return allNeoplasmData.stream().map(this::populateMedicalCode).collect(Collectors.toList());
 
@@ -202,59 +194,59 @@ public class CodeSearchService implements CodeSearchController {
 
 
     @Override
-    public List<MedicalCodeVO> getDrug(String code) {
-        return drugRepository.findDrugByCode(code).stream().map(m -> {
+    public List<MedicalCodeVO> getDrug(String code,String version) {
+        return drugRepository.findDrugByCodeAndVersion(code,version).stream().map(m -> {
             return getDrugNeoplasmHierarchy(m, "drug");
         }).collect(Collectors.toList());
     }
 
-    public List<MedicalCodeVO> getDrugDetails(String title) {
+    public List<MedicalCodeVO> getDrugDetails(String title,String version) {
         List<Map<String, Object>> allDrugData;
         if (title != null && !title.isEmpty()) {
             String titlePattern = "^" + title.toLowerCase();
-            allDrugData = drugRepository.findDrugByTitle(titlePattern);
+            allDrugData = drugRepository.findDrugByTitleAndVersion(titlePattern,version);
         } else {
-            allDrugData = drugRepository.findAllDrugData();
+            allDrugData = drugRepository.findAllDrugDataByVersion(version);
         }
         return allDrugData.stream().map(this::populateMedicalCode).collect(Collectors.toList());
     }
 
     @Override
-    public List<EindexVO> getEIndexByNameSearch(String name, boolean mainTermSearch) {
+    public List<EindexVO> getEIndexByNameSearch(String name, boolean mainTermSearch,String version) {
         String[] names = name.trim().split(" ");
         if (names.length > 1 && names.length == 2) {
-            return multipleSearch(names, mainTermSearch);
+            return multipleSearch(names, mainTermSearch,version);
         } else {
             if (mainTermSearch) {
-                return singleMainTermSearch(names[0]);
+                return singleMainTermSearch(names[0],version);
             } else {
-                return singleLevelTermSearch(names[0]);
+                return singleLevelTermSearch(names[0],version);
             }
         }
     }
 
     @Override
-    public List<AlterTerm> searchByAlterDescription(String alterDescription) {
-        return esAlterTermRepository.findByAlterDescription(alterDescription);
+    public List<AlterTerm> searchByAlterDescription(String alterDescription,String version) {
+        return esAlterTermRepository.findByAlterDescriptionAndVersion(alterDescription,version);
     }
 
 
     @Override
-    public List<EindexVO> getEIndexByTermSearch(String name, boolean mainTermSearch) {
+    public List<EindexVO> getEIndexByTermSearch(String name, boolean mainTermSearch,String version) {
         String[] names = name.trim().split(" ");
         List<EindexVO> result = new ArrayList<>();
         if (names.length == 1) {
-            result = singleTermSearch(names[0]);
+            result = singleTermSearch(names[0],version);
         } else if (names.length == 2) {
-            result = multipleSearch(names, mainTermSearch);
+            result = multipleSearch(names, mainTermSearch,version);
         }
         return result;
     }
 
-    private List<EindexVO> singleTermSearch(String name) {
+    private List<EindexVO> singleTermSearch(String name,String version) {
         List<EindexVO> result = new ArrayList<>();
         // Search for the given term
-        List<Eindex> termResults = eindexRepository.findMainTerm(name);
+        List<Eindex> termResults = eindexRepository.findMainTermByNameAndVersion(name,version);
         for (Eindex termResult : termResults) {
             EindexVO termVO = extractEindexVO(termResult);
             // Check if the term has no code but has see or seealso
@@ -346,10 +338,10 @@ public class CodeSearchService implements CodeSearchController {
     }
 
 
-    private List<EindexVO> multipleSearch(String[] names, boolean mainTermSearch) {
+    private List<EindexVO> multipleSearch(String[] names, boolean mainTermSearch,String version) {
         List<EindexVO> result = new ArrayList<>();
         if (mainTermSearch) {
-            List<Eindex> mainTermResult = eindexRepository.findMainTerm(names[0]);
+            List<Eindex> mainTermResult = eindexRepository.findMainTermByTitleAndVersion(names[0],version);
             if (mainTermResult.size() == 0) {
                 return result;
             }
@@ -360,9 +352,9 @@ public class CodeSearchService implements CodeSearchController {
             for (String searchTerm : names) {
                 List<EindexVO> searchResult;
                 if (mainTermSearch) {
-                    searchResult = singleMainTermSearch(searchTerm);
+                    searchResult = singleMainTermSearch(searchTerm,version);
                 } else {
-                    searchResult = singleLevelTermSearch(searchTerm);
+                    searchResult = singleLevelTermSearch(searchTerm,version);
                 }
                 result.addAll(searchResult);
             }
@@ -375,7 +367,7 @@ public class CodeSearchService implements CodeSearchController {
             //mainTerm LevelTermof1stTerm
             Integer resultCount = eindexRepository.mainTermHasLevelTerm(names[0], names[1]);
             if (resultCount > 0) {
-                result = singleMainTermSearch(names[0]);
+                result = singleMainTermSearch(names[0],version);
             }
             if (result.size() > 0) {
                 return result;
@@ -389,18 +381,18 @@ public class CodeSearchService implements CodeSearchController {
             }
 
             //mainTerm mainTerm(Else show all Level terms applicable for 2nd main term)
-            result = singleMainTermSearch(names[1]);
+            result = singleMainTermSearch(names[1],version);
             if (result.size() > 0) {
                 return result;
             }
 
             //mainTerm NotLevelTermof1stTerm(Else show all main terms associated with the level term entered)
-            result = singleLevelTermSearch(names[1]);
+            result = singleLevelTermSearch(names[1],version);
             if (result.size() > 0) {
                 return result;
             }
             //mainTerm NotinIndextable(Else show all Level(1st level) terms applicable for 1st main term)
-            result = singleMainTermSearch(names[0]);
+            result = singleMainTermSearch(names[0],version);
             if (result.size() > 0) {
                 return result;
             }
@@ -409,13 +401,13 @@ public class CodeSearchService implements CodeSearchController {
             //LevelTerm Maintermof1stterm
             Integer resultCount = eindexRepository.mainTermHasLevelTerm(names[1], names[0]);
             if (resultCount > 0) {
-                result = singleMainTermSearch(names[1]);
+                result = singleMainTermSearch(names[1],version);
             }
             if (result.size() > 0) {
                 return result;
             }
             //LevelTerm NotinIndextable
-            result = singleLevelTermSearch(names[0]);
+            result = singleLevelTermSearch(names[0],version);
             if (result.size() > 0) {
                 return result;
             }
@@ -439,34 +431,54 @@ public class CodeSearchService implements CodeSearchController {
         }
     }
 
-    private List<EindexVO> singleLevelTermSearch(String name) {
-        List<EindexVO> indexList = new ArrayList<>();
-        eindexRepository.searchLevelTermMainTerm(name).forEach(map -> {
-            if (indexMap != null && Integer.parseInt(indexMap.get("childId").toString()) != Integer.parseInt(map.get("childId").toString())) {
-                indexList.add(populateEindexVO(indexMap, code));
-                code = null;
-            }
-            indexMap = map;
-            if (map.get("code") != null) {
-                code = map.get("code").toString();
-            }
-        });
-        indexList.add(populateEindexVO(indexMap, code));
-        List<EindexVO> resultIndex = indexList.stream().filter(distinctByKey(p -> p.getId()))
-                .collect(Collectors.toList());
-        resultIndex.sort(Comparator.comparing(m -> m.getTitle(),
-                Comparator.nullsLast(Comparator.naturalOrder())
-        ));
-        return resultIndex;
-    }
+//    private List<EindexVO> singleLevelTermSearch(String name,String version) {
+//        List<EindexVO> indexList = new ArrayList<>();
+//        eindexRepository.searchLevelTermMainTerm(name,version).forEach(map -> {
+//            if (indexMap != null && Integer.parseInt(indexMap.get("childId").toString()) != Integer.parseInt(map.get("childId").toString())) {
+//                indexList.add(populateEindexVO(indexMap, code));
+//                code = null;
+//            }
+//            indexMap = map;
+//            if (map.get("code") != null) {
+//                code = map.get("code").toString();
+//            }
+//        });
+//        indexList.add(populateEindexVO(indexMap, code));
+//        List<EindexVO> resultIndex = indexList.stream().filter(distinctByKey(p -> p.getId()))
+//                .collect(Collectors.toList());
+//        resultIndex.sort(Comparator.comparing(m -> m.getTitle(),
+//                Comparator.nullsLast(Comparator.naturalOrder())
+//        ));
+//        return resultIndex;
+//    }
+private List<EindexVO> singleLevelTermSearch(String name, String version) {
+    List<EindexVO> indexList = new ArrayList<>();
+    eindexRepository.searchLevelTermMainTerm(name, version).forEach(map -> {
+        if (indexMap != null && Integer.parseInt(indexMap.get("childId").toString()) != Integer.parseInt(map.get("childId").toString())) {
+            indexList.add(populateEindexVO(indexMap, code));
+            code = null;
+        }
+        indexMap = map;
+        if (map.get("code") != null) {
+            code = map.get("code").toString();
+        }
+    });
+    indexList.add(populateEindexVO(indexMap, code));
+    List<EindexVO> resultIndex = indexList.stream().filter(distinctByKey(p -> p.getId()))
+            .collect(Collectors.toList());
+    resultIndex.sort(Comparator.comparing(m -> m.getTitle(),
+            Comparator.nullsLast(Comparator.naturalOrder())
+    ));
+    return resultIndex;
+}
 
     public static <T> Predicate<T> distinctByKey(Function<? super T, Object> keyExtractor) {
         Map<Object, Boolean> map = new ConcurrentHashMap<>();
         return t -> map.putIfAbsent(keyExtractor.apply(t), Boolean.TRUE) == null;
     }
 
-    private List<EindexVO> singleMainTermSearch(String name) {
-        return eindexRepository.searchMainTermLevelOne(name).stream().map(m -> {
+    private List<EindexVO> singleMainTermSearch(String name,String version) {
+        return eindexRepository.searchMainTermLevelOne(name,version).stream().map(m -> {
             return populateEindexVO(m);
         }).collect(Collectors.toList());
     }
