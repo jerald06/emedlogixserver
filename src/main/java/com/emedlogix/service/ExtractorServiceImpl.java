@@ -397,6 +397,7 @@ public class ExtractorServiceImpl implements ExtractorService {
                             AlterTerm alterTerm = new AlterTerm();
                             alterTerm.setCode(code);
                             alterTerm.setAlterDescription(description);
+                            alterTerm.setVersion(year.toString());
                             esAlterTermRepository.save(alterTerm);
                         }
                     } catch (Exception e) {

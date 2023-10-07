@@ -19,7 +19,7 @@ public class AlterTerm {
     private String code;
     @Field(type = FieldType.Text, name = "alterDescription")
     private String alterDescription;
-
+    @Field(type = FieldType.Text,name = "version")
     private String version;
 
     private String type;

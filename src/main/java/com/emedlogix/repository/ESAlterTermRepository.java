@@ -13,6 +13,5 @@ public interface ESAlterTermRepository extends ElasticsearchRepository<AlterTerm
     @Query("{\"bool\": {\"must\": [{\"match\": {\"alterDescription\": {\"query\": \"?0\", \"fuzziness\": \"AUTO\"}}}], \"filter\": [{\"term\": {\"version\": \"?1\"}}]}}")
     List<AlterTerm> findByAlterDescriptionAndVersion(String query, String version);
 
-
     Optional<AlterTerm> findByCode(String code);
 }
