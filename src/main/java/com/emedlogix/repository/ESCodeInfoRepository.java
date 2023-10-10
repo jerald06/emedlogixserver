@@ -23,8 +23,14 @@ public interface ESCodeInfoRepository extends ElasticsearchRepository<CodeInfo, 
     // @Query("{\"query_string\": {\"query\": \"?0~\"}}")
     // List<CodeInfo> findByDescriptionFuzzy(String query);
 
-    @Query("{\"bool\": {\"should\": [{\"query_string\": {\"query\": \"?0\"}}, {\"match\": {\"version\": \"?1\"}}]}}")
-    List<CodeInfo> findByDescriptionExactMatchWithVersion(String word, String version);
+
+
+
+
+
+
+    @Query("{\"bool\": {\"must\": [{\"query_string\": {\"query\": \"?0~\"}}, {\"match\": {\"version\": \"?1\"}}]}}")
+    List<CodeInfo> findByDescriptionFuzzyWithVersion(String word, String version);
 }
 
 
