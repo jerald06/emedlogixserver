@@ -265,7 +265,46 @@ public class ExtractorServiceImpl implements ExtractorService {
                             }
                             //save section;
                             logger.info("Saving Section into DB: size {}", sections.size());
-                            sectionRepository.saveAll(sections);
+
+                            Set<String> uniqueCodes = new HashSet<>();
+                            List<Section> sectionsToInsert = new ArrayList<>();
+
+                            for (Section section : sections) {
+                                String code = section.getCode();
+                                String version1 = section.getVersion();
+                                String uniqueKey = code + "-" + version1;
+
+                                // Check if the code and version combination is unique
+                                if (!uniqueCodes.contains(uniqueKey)) {
+                                    uniqueCodes.add(uniqueKey);
+                                    sectionsToInsert.add(section);
+                                } else {
+                                    // A duplicate code and version combination is encountered
+                                    // Check the conditions for prioritization
+                                    for (Section existingSection : sectionsToInsert) {
+                                        if (existingSection.getCode().equals(code) && existingSection.getVersion().equals(version1)) {
+                                            if (section.getVisImpair() != null) {
+                                                // Keep the row with vis_Impair and remove the others
+                                                sectionsToInsert.remove(existingSection);
+                                                sectionsToInsert.add(section);
+                                                break;
+                                            } else if (section.getSevenChr() != null) {
+                                                // Keep the row with seven_Chr and remove the others
+                                                sectionsToInsert.remove(existingSection);
+                                                sectionsToInsert.add(section);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+// Insert the unique sections into the database
+                            sectionRepository.saveAll(sectionsToInsert);
+
+
+
+
                             logger.info("Saved Section into DB: Successfully {}", sections.size());
                         } else {
                             //parseSection(sectionType.getInclusionTermOrSevenChrNoteOrSevenChrDef().listIterator()
