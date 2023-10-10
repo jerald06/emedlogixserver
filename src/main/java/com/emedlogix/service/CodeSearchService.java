@@ -100,20 +100,20 @@ public class CodeSearchService implements CodeSearchController {
 
     @Override
     public List<CodeInfo> getCodeInfoDescription(String description,String version) {
-        logger.info("Getting Code Information for Description: {}", description);
+        logger.info("Getting Code Information for Description ", description);
+        String[] words = description.split(" \\s+");
         List<CodeInfo> codeInfoList = new ArrayList<>();
-
-        // Split the input description into words
-        String[] words = description.split("\\s+");
-
-        // Iterate through the words and perform a fuzzy search for each word
         for (String word : words) {
-            List<CodeInfo> wordMatches = esCodeInfoRepository.findByDescriptionFuzzyWithVersion(word, version);
+            List<CodeInfo> wordMatches = esCodeInfoRepository.findByDescriptionFuzzyWithVersion(word,version);
             codeInfoList.addAll(wordMatches);
         }
-
-        logger.info("Got matching description: {}", codeInfoList.size());
-
+        logger.info("Got matching description :", codeInfoList.size());
+        Collections.sort(codeInfoList, new Comparator<CodeInfo>() {
+            @Override
+            public int compare(CodeInfo codeInfo1, CodeInfo codeInfo2) {
+                return codeInfo1.getCode().compareTo(codeInfo2.getCode());
+            }
+        });
         return codeInfoList;
     }
 
